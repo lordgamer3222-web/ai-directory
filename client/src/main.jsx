@@ -28,6 +28,16 @@ import {
   Zap,
 } from "lucide-react";
 import "./styles.css";
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL || "https://ai-directory-mhje.onrender.com"
+).replace(/\/+$/, "");
+
+function apiFetch(path, options = {}) {
+  return fetch(`${API_BASE_URL}${path}`, {
+    credentials: "include",
+    ...options,
+  });
+}
 const fallbackTools = [
   {
     name: "ChatGPT",
@@ -250,14 +260,20 @@ function App() {
   const [sort, setSort] = useState("Featured");
   const [saved, setSaved] = useState(() => {
     try {
-      const parsed = JSON.parse(localStorage.getItem("ai-library-saved-tools") || "[]");
+      const parsed = JSON.parse(
+        localStorage.getItem("ai-library-saved-tools") || "[]",
+      );
       return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
     }
   });
   const [language, setLanguage] = useState(() =>
-    readStoredValue("ai-library-language", languageOptions.map((item) => item.value), "en"),
+    readStoredValue(
+      "ai-library-language",
+      languageOptions.map((item) => item.value),
+      "en",
+    ),
   );
   const copy = translations[language] || translations.en;
   const [localizedDescriptions, setLocalizedDescriptions] = useState(
@@ -269,7 +285,9 @@ function App() {
   const [theme, setTheme] = useState(() =>
     readStoredValue("ai-library-theme", ["system", "light", "dark"], "system"),
   );
-  const [assistantLayout, setAssistantLayout] = useState(readAssistantPanelLayout);
+  const [assistantLayout, setAssistantLayout] = useState(
+    readAssistantPanelLayout,
+  );
   const assistantPanelRef = useRef(null);
   const assistantInteractionRef = useRef(null);
   const [currentUser, setCurrentUser] = useState(null);
@@ -296,7 +314,10 @@ function App() {
   const [toolsLoading, setToolsLoading] = useState(true);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { role: "assistant", text: translations[language]?.welcome || translations.en.welcome },
+    {
+      role: "assistant",
+      text: translations[language]?.welcome || translations.en.welcome,
+    },
   ]);
   const [prompt, setPrompt] = useState("");
   const [thinking, setThinking] = useState(false);
@@ -308,13 +329,17 @@ function App() {
     const root = document.documentElement;
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const applyPreferences = () => {
-      const activeTheme = theme === "system" ? (media.matches ? "dark" : "light") : theme;
+      const activeTheme =
+        theme === "system" ? (media.matches ? "dark" : "light") : theme;
       root.dataset.theme = activeTheme;
       root.lang = language;
       root.style.colorScheme = activeTheme;
       document
         .querySelector('meta[name="theme-color"]')
-        ?.setAttribute("content", activeTheme === "dark" ? "#060d22" : "#f5f4ed");
+        ?.setAttribute(
+          "content",
+          activeTheme === "dark" ? "#060d22" : "#f5f4ed",
+        );
     };
     applyPreferences();
     try {
@@ -376,7 +401,7 @@ function App() {
             ]);
             let request = translationRequestsRef.current.get(requestKey);
             if (!request) {
-              request = fetch("/api/tools/translate-descriptions", {
+              request = apiFetch("/api/tools/translate-descriptions", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -503,11 +528,7 @@ function App() {
   function moveAssistantPanelInteraction(event) {
     const interaction = assistantInteractionRef.current;
     const panel = assistantPanelRef.current;
-    if (
-      !interaction ||
-      !panel ||
-      interaction.pointerId !== event.pointerId
-    ) {
+    if (!interaction || !panel || interaction.pointerId !== event.pointerId) {
       return;
     }
     const { initial, mode } = interaction;
@@ -516,10 +537,17 @@ function App() {
     const margin = 8;
     let next;
     if (mode === "move") {
-      next = clampPanelLayout({ ...initial, left: initial.left + dx, top: initial.top + dy });
+      next = clampPanelLayout({
+        ...initial,
+        left: initial.left + dx,
+        top: initial.top + dy,
+      });
     } else {
       const maxWidth = Math.max(160, window.innerWidth - initial.left - margin);
-      const maxHeight = Math.max(180, window.innerHeight - initial.top - margin);
+      const maxHeight = Math.max(
+        180,
+        window.innerHeight - initial.top - margin,
+      );
       next = {
         ...initial,
         width: Math.min(
@@ -553,11 +581,19 @@ function App() {
 
   function resizeAssistantPanelWithKeyboard(event) {
     const panel = assistantPanelRef.current;
-    if (!panel || !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key))
+    if (
+      !panel ||
+      !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)
+    )
       return;
     event.preventDefault();
     const rect = panel.getBoundingClientRect();
-    const current = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+    const current = {
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height,
+    };
     if (event.key === "ArrowLeft") current.width -= 16;
     if (event.key === "ArrowRight") current.width += 16;
     if (event.key === "ArrowUp") current.height -= 16;
@@ -600,7 +636,7 @@ function App() {
 
   useEffect(() => {
     let active = true;
-    fetch("/api/tools")
+    apiFetch("/api/tools")
       .then((response) => (response.ok ? response.json() : Promise.reject()))
       .then((data) => {
         if (active && Array.isArray(data)) setTools(data);
@@ -616,18 +652,18 @@ function App() {
 
   useEffect(() => {
     let active = true;
-    fetch("/api/auth/session", { credentials: "include" })
+    apiFetch("/api/auth/session", { credentials: "include" })
       .then((response) => (response.ok ? response.json() : Promise.reject()))
       .then(async (session) => {
         if (!active || !session?.user) return;
         setCurrentUser(session.user);
-        await fetch("/api/auth/merge-saved", {
+        await apiFetch("/api/auth/merge-saved", {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ visitorId, toolIds: saved }),
         });
-        const response = await fetch("/api/saved-tools", {
+        const response = await apiFetch("/api/saved-tools", {
           credentials: "include",
         });
         if (!response.ok) return;
@@ -716,15 +752,13 @@ function App() {
     } catch {}
     if (!tool._id) return;
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/saved-tools${wasSaved ? `/${encodeURIComponent(tool._id)}` : ""}`,
         {
           method: wasSaved ? "DELETE" : "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: wasSaved
-            ? undefined
-            : JSON.stringify({ toolId: tool._id }),
+          body: wasSaved ? undefined : JSON.stringify({ toolId: tool._id }),
         },
       );
       if (!response.ok) throw new Error("Save sync unavailable");
@@ -748,7 +782,7 @@ function App() {
     }
     setAuthBusy(true);
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/auth/${authMode === "register" ? "register" : "login"}`,
         {
           method: "POST",
@@ -760,21 +794,23 @@ function App() {
       const data = await response.json();
       if (!response.ok)
         throw new Error(
-          ({
+          {
             401: copy.authInvalid,
             409: copy.emailInUse,
             429: copy.authRateLimit,
             503: copy.authDatabase,
-          })[response.status] || data.error || copy.authGenericError,
+          }[response.status] ||
+            data.error ||
+            copy.authGenericError,
         );
       setCurrentUser(data.user);
-      await fetch("/api/auth/merge-saved", {
+      await apiFetch("/api/auth/merge-saved", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ visitorId, toolIds: saved }),
       });
-      const savedResponse = await fetch("/api/saved-tools", {
+      const savedResponse = await apiFetch("/api/saved-tools", {
         credentials: "include",
       });
       if (savedResponse.ok) {
@@ -795,7 +831,7 @@ function App() {
   }
 
   async function signOut() {
-    await fetch("/api/auth/logout", {
+    await apiFetch("/api/auth/logout", {
       method: "POST",
       credentials: "include",
     }).catch(() => {});
@@ -815,7 +851,7 @@ function App() {
     setPrompt("");
     setThinking(true);
     try {
-      const response = await fetch("/api/ai/ask", {
+      const response = await apiFetch("/api/ai/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -857,7 +893,7 @@ function App() {
     const form = new FormData(e.currentTarget);
     const payload = Object.fromEntries(form.entries());
     try {
-      const r = await fetch("/api/tools", {
+      const r = await apiFetch("/api/tools", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -876,683 +912,688 @@ function App() {
 
   return (
     <>
-    <div className="app-shell" id="home">
-      <div className="ambient ambient-one" />
-      <div className="ambient ambient-two" />
-      <header className="topbar">
-        <a className="brand" href="#home" aria-label="AI Library home">
-          <span className="brand-mark">
-            <Sparkles size={27} />
-          </span>
-          <span>
-            AI <b>Library</b>
-          </span>
-        </a>
-        <button
-          className="mobile-toggle"
-          onClick={() => setMobileMenu((v) => !v)}
-          aria-label={copy.toggleNav}
-        >
-          {mobileMenu ? <X /> : <Menu />}
-        </button>
-        <nav className={mobileMenu ? "nav-links open" : "nav-links"}>
-          <a href="#explore" onClick={() => setMobileMenu(false)}>
-            {copy.explore}
-          </a>
-          <a
-            href="#explore"
-            onClick={() => {
-              setCategory("All");
-              setShowSavedOnly(false);
-              setMobileMenu(false);
-            }}
-          >
-            {copy.categories}
-          </a>
-          <button
-            className="nav-text-button"
-            onClick={() => {
-              setShowSavedOnly((v) => !v);
-              setMobileMenu(false);
-              document
-                .getElementById("explore")
-                ?.scrollIntoView({ behavior: "smooth" });
-            }}
-          >
-            {showSavedOnly ? copy.allTools : copy.savedTools} ({saved.length})
-          </button>
-          <button
-            className="nav-text-button"
-            onClick={() => {
-              setSubmitOpen(true);
-              setSubmitted(false);
-              setMobileMenu(false);
-            }}
-          >
-            {copy.submitTool}
-          </button>
-          <button
-            className="nav-text-button account-action"
-            title={currentUser?.email || undefined}
-            onClick={() => {
-              setMobileMenu(false);
-              if (currentUser) signOut();
-              else {
-                setAuthMode("login");
-                setAuthError("");
-                setAuthNotice("");
-                setAuthOpen(true);
-              }
-            }}
-          >
-            {currentUser ? copy.signOut : copy.signIn}
-          </button>
-          <label className="preference-control">
-            <span>{copy.language}</span>
-            <select
-              aria-label={copy.language}
-              value={language}
-              onChange={(event) => setLanguage(event.target.value)}
-            >
-              {languageOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="preference-control">
-            <span>{copy.theme}</span>
-            <select
-              aria-label={copy.theme}
-              value={theme}
-              onChange={(event) => setTheme(event.target.value)}
-            >
-              <option value="system">{copy.system}</option>
-              <option value="light">{copy.light}</option>
-              <option value="dark">{copy.dark}</option>
-            </select>
-          </label>
-        </nav>
-        <div className="nav-actions">
-          <button
-            className="button button-primary button-small"
-            onClick={() => setAssistantOpen(true)}
-          >
-            <Sparkles size={15} /> {copy.askAI}
-          </button>
-        </div>
-      </header>
-
-      <main>
-        <section className="hero">
-          <div className="hero-orb orb-left" />
-          <div className="hero-orb orb-right" />
-          <div className="hero-spark spark-a">✦</div>
-          <div className="hero-spark spark-b">✧</div>
-          <div className="eyebrow">
-            <span className="pulse-dot" /> {copy.heroEyebrow}
-          </div>
-          <h1>
-            {copy.heroLineOne}
-            <br />
-            <span>
-              {copy.heroLineTwo} <em>{copy.heroEmphasis}</em>
+      <div className="app-shell" id="home">
+        <div className="ambient ambient-one" />
+        <div className="ambient ambient-two" />
+        <header className="topbar">
+          <a className="brand" href="#home" aria-label="AI Library home">
+            <span className="brand-mark">
+              <Sparkles size={27} />
             </span>
-          </h1>
-          <p className="hero-subtitle">{copy.heroSubtitle}</p>
-          <div className="hero-actions">
-            <button className="button button-primary" onClick={scrollTools}>
-              <Search size={18} /> {copy.exploreTools} <ArrowRight size={16} />
+            <span>
+              AI <b>Library</b>
+            </span>
+          </a>
+          <button
+            className="mobile-toggle"
+            onClick={() => setMobileMenu((v) => !v)}
+            aria-label={copy.toggleNav}
+          >
+            {mobileMenu ? <X /> : <Menu />}
+          </button>
+          <nav className={mobileMenu ? "nav-links open" : "nav-links"}>
+            <a href="#explore" onClick={() => setMobileMenu(false)}>
+              {copy.explore}
+            </a>
+            <a
+              href="#explore"
+              onClick={() => {
+                setCategory("All");
+                setShowSavedOnly(false);
+                setMobileMenu(false);
+              }}
+            >
+              {copy.categories}
+            </a>
+            <button
+              className="nav-text-button"
+              onClick={() => {
+                setShowSavedOnly((v) => !v);
+                setMobileMenu(false);
+                document
+                  .getElementById("explore")
+                  ?.scrollIntoView({ behavior: "smooth" });
+              }}
+            >
+              {showSavedOnly ? copy.allTools : copy.savedTools} ({saved.length})
             </button>
             <button
-              className="button button-outline"
+              className="nav-text-button"
+              onClick={() => {
+                setSubmitOpen(true);
+                setSubmitted(false);
+                setMobileMenu(false);
+              }}
+            >
+              {copy.submitTool}
+            </button>
+            <button
+              className="nav-text-button account-action"
+              title={currentUser?.email || undefined}
+              onClick={() => {
+                setMobileMenu(false);
+                if (currentUser) signOut();
+                else {
+                  setAuthMode("login");
+                  setAuthError("");
+                  setAuthNotice("");
+                  setAuthOpen(true);
+                }
+              }}
+            >
+              {currentUser ? copy.signOut : copy.signIn}
+            </button>
+            <label className="preference-control">
+              <span>{copy.language}</span>
+              <select
+                aria-label={copy.language}
+                value={language}
+                onChange={(event) => setLanguage(event.target.value)}
+              >
+                {languageOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="preference-control">
+              <span>{copy.theme}</span>
+              <select
+                aria-label={copy.theme}
+                value={theme}
+                onChange={(event) => setTheme(event.target.value)}
+              >
+                <option value="system">{copy.system}</option>
+                <option value="light">{copy.light}</option>
+                <option value="dark">{copy.dark}</option>
+              </select>
+            </label>
+          </nav>
+          <div className="nav-actions">
+            <button
+              className="button button-primary button-small"
               onClick={() => setAssistantOpen(true)}
             >
-              <Sparkles size={17} /> {copy.askAI}
+              <Sparkles size={15} /> {copy.askAI}
             </button>
           </div>
-        </section>
+        </header>
 
-        <section className="explore-section" id="explore">
-          <div className="search-wrap">
-            <Search className="search-icon" size={21} />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={copy.searchPlaceholder}
-              aria-label={copy.searchAria}
-            />
-            <button
-              className="search-ai"
-              onClick={() => {
-                setPrompt(query);
-                setAssistantOpen(true);
-              }}
-              title={copy.askAiTitle}
-            >
-              <Sparkles size={19} />
-            </button>
-          </div>
-          <div className="filters">
-            <button
-              className={showSavedOnly ? "saved-filter active" : "saved-filter"}
-              onClick={() => setShowSavedOnly((v) => !v)}
-            >
-              <Bookmark size={15} />{" "}
-              {showSavedOnly ? copy.showingSaved : copy.savedTools} ({saved.length})
-            </button>
-            <label className="filter-select">
-              <LayoutGrid size={17} />
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                aria-label={copy.filterCategory}
-              >
-                {categoryOptions.map((c) => (
-                  <option key={c} value={c}>
-                    {c === "All" ? copy.category : c}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={15} />
-            </label>
-            <label className="filter-select">
-              <Zap size={16} />
-              <select
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                aria-label={copy.filterPrice}
-              >
-                {pricingOptions.map((p) => (
-                  <option key={p} value={p}>
-                    {p === "All"
-                      ? copy.price
-                      : p === "Free"
-                        ? copy.free
-                        : p === "Freemium"
-                          ? copy.freemium
-                          : p === "Paid"
-                            ? copy.paid
-                            : copy.openSource}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={15} />
-            </label>
-            <label className="filter-select">
-              <span className="sort-icon">↕</span>
-              <select
-                value={sort}
-                onChange={(e) => setSort(e.target.value)}
-                aria-label={copy.sortTools}
-              >
-                <option value="Featured">{copy.featured}</option>
-                <option value="A–Z">{copy.aToZ}</option>
-                <option value="Free first">{copy.freeFirst}</option>
-              </select>
-              <ChevronDown size={15} />
-            </label>
-            <span className="result-count">
-              {copy.toolsFound.replace("{count}", String(filtered.length))}
-            </span>
-          </div>
-          {descriptionTranslationStatus !== "idle" && (
-            <div
-              className={`description-translation-status ${descriptionTranslationStatus}`}
-              role="status"
-            >
-              <Sparkles size={13} />
-              {descriptionTranslationStatus === "loading"
-                ? copy.translatingDescriptions
-                : copy.translationUnavailable}
+        <main>
+          <section className="hero">
+            <div className="hero-orb orb-left" />
+            <div className="hero-orb orb-right" />
+            <div className="hero-spark spark-a">✦</div>
+            <div className="hero-spark spark-b">✧</div>
+            <div className="eyebrow">
+              <span className="pulse-dot" /> {copy.heroEyebrow}
             </div>
-          )}
-          <div className="tool-grid">
-            {filtered.map((tool, i) => (
-              <article
-                className="tool-card"
-                style={{ "--delay": `${i * 70}ms` }}
-                key={tool._id || tool.name}
-              >
-                <div className={`tool-icon icon-${i % 4}`}>
-                  <ToolLogo tool={tool} size={58} />
-                  <span className="icon-spark">✦</span>
-                </div>
-                <div className="card-title-row">
-                  <h2>{tool.name}</h2>
-                  <button
-                    className={
-                      saved.includes(tool._id || tool.name)
-                        ? "save-button saved"
-                        : "save-button"
-                    }
-                    onClick={() => toggleSaved(tool)}
-                    aria-label={
-                      saved.includes(tool._id || tool.name)
-                        ? copy.removeBookmark
-                        : copy.bookmarkTool
-                    }
-                  >
-                    {saved.includes(tool._id || tool.name) ? (
-                      <Check size={17} />
-                    ) : (
-                      <Bookmark size={17} />
-                    )}
-                  </button>
-                </div>
-                <span className="category-pill">{tool.category}</span>
-                <p className="tool-description">{descriptionForTool(tool)}</p>
-                <span
-                  className={`price-pill ${String(tool.pricing).toLowerCase()}`}
-                >
-                  {tool.pricing === "Free"
-                    ? copy.free
-                    : tool.pricing === "Paid"
-                      ? copy.paid
-                      : tool.pricing === "Open Source"
-                        ? copy.openSource
-                        : copy.freemium}
-                </span>
-                <div className="tag-row">
-                  {(tool.tags || []).slice(0, 4).map((tag) => (
-                    <span key={tag}>{tag}</span>
-                  ))}
-                </div>
-                {safeExternalUrl(tool.url) ? (
-                  <a
-                    className="view-tool"
-                    href={safeExternalUrl(tool.url)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {copy.viewTool} <ArrowRight size={16} />
-                  </a>
-                ) : (
-                  <span className="view-tool disabled">
-                    {copy.websiteUnavailable}
-                  </span>
-                )}
-              </article>
-            ))}
-          </div>
-          {toolsLoading && (
-            <div className="loading-state" role="status">
-              {copy.loadingTools}
-            </div>
-          )}
-          {filtered.length === 0 && !toolsLoading && (
-            <div className="empty-state">
-              <Search size={30} />
-              <h3>{copy.noTools}</h3>
-              <p>{copy.tryAnother}</p>
+            <h1>
+              {copy.heroLineOne}
+              <br />
+              <span>
+                {copy.heroLineTwo} <em>{copy.heroEmphasis}</em>
+              </span>
+            </h1>
+            <p className="hero-subtitle">{copy.heroSubtitle}</p>
+            <div className="hero-actions">
+              <button className="button button-primary" onClick={scrollTools}>
+                <Search size={18} /> {copy.exploreTools}{" "}
+                <ArrowRight size={16} />
+              </button>
               <button
                 className="button button-outline"
-                onClick={() => {
-                  setQuery("");
-                  setCategory("All");
-                  setPrice("All");
-                  setShowSavedOnly(false);
-                }}
+                onClick={() => setAssistantOpen(true)}
               >
-                {copy.clearFilters}
+                <Sparkles size={17} /> {copy.askAI}
               </button>
             </div>
-          )}
-        </section>
-        <section className="bottom-cta">
-          <div className="cta-icon">
-            <Sparkles />
-          </div>
-          <div>
-            <h2>{copy.ctaTitle}</h2>
-            <p>{copy.ctaCopy}</p>
-          </div>
-          <button
-            className="button button-primary"
-            onClick={() => {
-              setSubmitOpen(true);
-              setSubmitted(false);
-            }}
-          >
-            {copy.submitToolCta} <ArrowRight size={16} />
-          </button>
-        </section>
-      </main>
-      <button
-        className="ask-fab"
-        onClick={() => setAssistantOpen((v) => !v)}
-        aria-label={copy.openAssistant}
-      >
-        <span className="fab-glow">
-          <MessageCircle size={23} />
-        </span>
-        <b>Ask Me</b>
-      </button>
-      {assistantOpen && (
-        <aside
-          ref={assistantPanelRef}
-          className="chat-panel"
-          style={
-            assistantLayout
-              ? {
-                  left: `${assistantLayout.left}px`,
-                  top: `${assistantLayout.top}px`,
-                  right: "auto",
-                  bottom: "auto",
-                  width: `${assistantLayout.width}px`,
-                  height: `${assistantLayout.height}px`,
+          </section>
+
+          <section className="explore-section" id="explore">
+            <div className="search-wrap">
+              <Search className="search-icon" size={21} />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={copy.searchPlaceholder}
+                aria-label={copy.searchAria}
+              />
+              <button
+                className="search-ai"
+                onClick={() => {
+                  setPrompt(query);
+                  setAssistantOpen(true);
+                }}
+                title={copy.askAiTitle}
+              >
+                <Sparkles size={19} />
+              </button>
+            </div>
+            <div className="filters">
+              <button
+                className={
+                  showSavedOnly ? "saved-filter active" : "saved-filter"
                 }
-              : undefined
-          }
-          onPointerMove={moveAssistantPanelInteraction}
-          onPointerUp={finishAssistantPanelInteraction}
-          onPointerCancel={finishAssistantPanelInteraction}
-        >
-          <div
-            className="chat-header"
-            onPointerDown={(event) =>
-              beginAssistantPanelInteraction(event, "move")
-            }
-            title={copy.dragHint}
-          >
-            <div className="chat-avatar">
-              <Sparkles size={18} />
+                onClick={() => setShowSavedOnly((v) => !v)}
+              >
+                <Bookmark size={15} />{" "}
+                {showSavedOnly ? copy.showingSaved : copy.savedTools} (
+                {saved.length})
+              </button>
+              <label className="filter-select">
+                <LayoutGrid size={17} />
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  aria-label={copy.filterCategory}
+                >
+                  {categoryOptions.map((c) => (
+                    <option key={c} value={c}>
+                      {c === "All" ? copy.category : c}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={15} />
+              </label>
+              <label className="filter-select">
+                <Zap size={16} />
+                <select
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  aria-label={copy.filterPrice}
+                >
+                  {pricingOptions.map((p) => (
+                    <option key={p} value={p}>
+                      {p === "All"
+                        ? copy.price
+                        : p === "Free"
+                          ? copy.free
+                          : p === "Freemium"
+                            ? copy.freemium
+                            : p === "Paid"
+                              ? copy.paid
+                              : copy.openSource}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={15} />
+              </label>
+              <label className="filter-select">
+                <span className="sort-icon">↕</span>
+                <select
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value)}
+                  aria-label={copy.sortTools}
+                >
+                  <option value="Featured">{copy.featured}</option>
+                  <option value="A–Z">{copy.aToZ}</option>
+                  <option value="Free first">{copy.freeFirst}</option>
+                </select>
+                <ChevronDown size={15} />
+              </label>
+              <span className="result-count">
+                {copy.toolsFound.replace("{count}", String(filtered.length))}
+              </span>
             </div>
-            <div>
-              <b>
-                Ask Me <span className="online-dot" />
-              </b>
-              <small>{copy.chatSubtitle}</small>
-            </div>
-            <button
-              onClick={() => setAssistantOpen(false)}
-              aria-label={copy.closeAssistant}
-            >
-              <X size={19} />
-            </button>
-          </div>
-          <div className="chat-messages">
-            {messages.map((m, i) => (
-              <div key={i} className={`chat-message-group ${m.role}`}>
-                <div className={`chat-message ${m.role}`}>
-                  {m.role === "assistant" ? (
-                    <FormattedAssistantText text={m.text} />
-                  ) : (
-                    m.text
-                  )}
-                </div>
-                {m.recommendations?.length > 0 && (
-                  <div className="chat-recommendations">
-                    {m.recommendations.map((tool) => (
-                      <article className="chat-recommendation" key={tool.id}>
-                        <ToolLogo tool={tool} size={36} />
-                        <div>
-                          <b>{tool.name}</b>
-                          <p>{tool.reason || descriptionForTool(tool)}</p>
-                          <a
-                            href={safeExternalUrl(tool.url)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            {copy.officialWebsite} <ExternalLink size={12} />
-                          </a>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-            {thinking && (
-              <div className="chat-message assistant typing">
-                <i />
-                <i />
-                <i />
+            {descriptionTranslationStatus !== "idle" && (
+              <div
+                className={`description-translation-status ${descriptionTranslationStatus}`}
+                role="status"
+              >
+                <Sparkles size={13} />
+                {descriptionTranslationStatus === "loading"
+                  ? copy.translatingDescriptions
+                  : copy.translationUnavailable}
               </div>
             )}
-          </div>
-          <div className="suggestion-row">
-            <button
-              onClick={() =>
-                setPrompt(copy.studentPrompt)
-              }
-            >
-              {copy.aiStudents}
-            </button>
-            <button onClick={() => setPrompt(copy.codingPrompt)}>
-              {copy.codingTools}
-            </button>
-          </div>
-          <form className="chat-input" onSubmit={askAI}>
-            <input
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder={copy.chatPlaceholder}
-              aria-label={copy.chatInputAria}
-              maxLength={3000}
-            />
-            <button
-              disabled={thinking || !prompt.trim()}
-              aria-label={copy.sendMessage}
-            >
-              <Send size={17} />
-            </button>
-          </form>
-          <p className="chat-disclaimer">
-            {copy.chatDisclaimer}
-          </p>
-          <button
-            type="button"
-            className="chat-resize-handle"
-            aria-label={copy.resizeAria}
-            title={copy.resizeAria}
-            onPointerDown={(event) => {
-              event.stopPropagation();
-              beginAssistantPanelInteraction(event, "resize");
-            }}
-            onKeyDown={resizeAssistantPanelWithKeyboard}
-          />
-        </aside>
-      )}
-
-      {authOpen && (
-        <div className="modal-backdrop" onClick={() => setAuthOpen(false)}>
-          <section
-            className="submit-modal auth-modal"
-            role="dialog"
-            aria-modal="true"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <button
-              className="modal-close"
-              type="button"
-              onClick={() => setAuthOpen(false)}
-              aria-label={copy.close}
-            >
-              <X />
-            </button>
-            <div className="modal-kicker">
-              <Sparkles size={15} /> AI LIBRARY
+            <div className="tool-grid">
+              {filtered.map((tool, i) => (
+                <article
+                  className="tool-card"
+                  style={{ "--delay": `${i * 70}ms` }}
+                  key={tool._id || tool.name}
+                >
+                  <div className={`tool-icon icon-${i % 4}`}>
+                    <ToolLogo tool={tool} size={58} />
+                    <span className="icon-spark">✦</span>
+                  </div>
+                  <div className="card-title-row">
+                    <h2>{tool.name}</h2>
+                    <button
+                      className={
+                        saved.includes(tool._id || tool.name)
+                          ? "save-button saved"
+                          : "save-button"
+                      }
+                      onClick={() => toggleSaved(tool)}
+                      aria-label={
+                        saved.includes(tool._id || tool.name)
+                          ? copy.removeBookmark
+                          : copy.bookmarkTool
+                      }
+                    >
+                      {saved.includes(tool._id || tool.name) ? (
+                        <Check size={17} />
+                      ) : (
+                        <Bookmark size={17} />
+                      )}
+                    </button>
+                  </div>
+                  <span className="category-pill">{tool.category}</span>
+                  <p className="tool-description">{descriptionForTool(tool)}</p>
+                  <span
+                    className={`price-pill ${String(tool.pricing).toLowerCase()}`}
+                  >
+                    {tool.pricing === "Free"
+                      ? copy.free
+                      : tool.pricing === "Paid"
+                        ? copy.paid
+                        : tool.pricing === "Open Source"
+                          ? copy.openSource
+                          : copy.freemium}
+                  </span>
+                  <div className="tag-row">
+                    {(tool.tags || []).slice(0, 4).map((tag) => (
+                      <span key={tag}>{tag}</span>
+                    ))}
+                  </div>
+                  {safeExternalUrl(tool.url) ? (
+                    <a
+                      className="view-tool"
+                      href={safeExternalUrl(tool.url)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {copy.viewTool} <ArrowRight size={16} />
+                    </a>
+                  ) : (
+                    <span className="view-tool disabled">
+                      {copy.websiteUnavailable}
+                    </span>
+                  )}
+                </article>
+              ))}
             </div>
-            <h2>
-              {authMode === "register" ? copy.authTitleRegister : copy.authTitleLogin}
-            </h2>
-            <p className="modal-copy">{copy.authIntro}</p>
-            {authNotice && <p className="auth-notice">{authNotice}</p>}
-            <form className="submit-form auth-form" onSubmit={submitAuth}>
-              <label>
-                {copy.email}
-                <input
-                  name="email"
-                  type="email"
-                  autoComplete="username"
-                  maxLength={254}
-                  required
-                />
-              </label>
-              <label>
-                {copy.password}
-                <input
-                  name="password"
-                  type="password"
-                  autoComplete={authMode === "register" ? "new-password" : "current-password"}
-                  minLength={authMode === "register" ? 10 : undefined}
-                  maxLength={128}
-                  required
-                />
-              </label>
-              {authMode === "register" && (
+            {toolsLoading && (
+              <div className="loading-state" role="status">
+                {copy.loadingTools}
+              </div>
+            )}
+            {filtered.length === 0 && !toolsLoading && (
+              <div className="empty-state">
+                <Search size={30} />
+                <h3>{copy.noTools}</h3>
+                <p>{copy.tryAnother}</p>
+                <button
+                  className="button button-outline"
+                  onClick={() => {
+                    setQuery("");
+                    setCategory("All");
+                    setPrice("All");
+                    setShowSavedOnly(false);
+                  }}
+                >
+                  {copy.clearFilters}
+                </button>
+              </div>
+            )}
+          </section>
+          <section className="bottom-cta">
+            <div className="cta-icon">
+              <Sparkles />
+            </div>
+            <div>
+              <h2>{copy.ctaTitle}</h2>
+              <p>{copy.ctaCopy}</p>
+            </div>
+            <button
+              className="button button-primary"
+              onClick={() => {
+                setSubmitOpen(true);
+                setSubmitted(false);
+              }}
+            >
+              {copy.submitToolCta} <ArrowRight size={16} />
+            </button>
+          </section>
+        </main>
+        <button
+          className="ask-fab"
+          onClick={() => setAssistantOpen((v) => !v)}
+          aria-label={copy.openAssistant}
+        >
+          <span className="fab-glow">
+            <MessageCircle size={23} />
+          </span>
+          <b>Ask Me</b>
+        </button>
+        {assistantOpen && (
+          <aside
+            ref={assistantPanelRef}
+            className="chat-panel"
+            style={
+              assistantLayout
+                ? {
+                    left: `${assistantLayout.left}px`,
+                    top: `${assistantLayout.top}px`,
+                    right: "auto",
+                    bottom: "auto",
+                    width: `${assistantLayout.width}px`,
+                    height: `${assistantLayout.height}px`,
+                  }
+                : undefined
+            }
+            onPointerMove={moveAssistantPanelInteraction}
+            onPointerUp={finishAssistantPanelInteraction}
+            onPointerCancel={finishAssistantPanelInteraction}
+          >
+            <div
+              className="chat-header"
+              onPointerDown={(event) =>
+                beginAssistantPanelInteraction(event, "move")
+              }
+              title={copy.dragHint}
+            >
+              <div className="chat-avatar">
+                <Sparkles size={18} />
+              </div>
+              <div>
+                <b>
+                  Ask Me <span className="online-dot" />
+                </b>
+                <small>{copy.chatSubtitle}</small>
+              </div>
+              <button
+                onClick={() => setAssistantOpen(false)}
+                aria-label={copy.closeAssistant}
+              >
+                <X size={19} />
+              </button>
+            </div>
+            <div className="chat-messages">
+              {messages.map((m, i) => (
+                <div key={i} className={`chat-message-group ${m.role}`}>
+                  <div className={`chat-message ${m.role}`}>
+                    {m.role === "assistant" ? (
+                      <FormattedAssistantText text={m.text} />
+                    ) : (
+                      m.text
+                    )}
+                  </div>
+                  {m.recommendations?.length > 0 && (
+                    <div className="chat-recommendations">
+                      {m.recommendations.map((tool) => (
+                        <article className="chat-recommendation" key={tool.id}>
+                          <ToolLogo tool={tool} size={36} />
+                          <div>
+                            <b>{tool.name}</b>
+                            <p>{tool.reason || descriptionForTool(tool)}</p>
+                            <a
+                              href={safeExternalUrl(tool.url)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              {copy.officialWebsite} <ExternalLink size={12} />
+                            </a>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {thinking && (
+                <div className="chat-message assistant typing">
+                  <i />
+                  <i />
+                  <i />
+                </div>
+              )}
+            </div>
+            <div className="suggestion-row">
+              <button onClick={() => setPrompt(copy.studentPrompt)}>
+                {copy.aiStudents}
+              </button>
+              <button onClick={() => setPrompt(copy.codingPrompt)}>
+                {copy.codingTools}
+              </button>
+            </div>
+            <form className="chat-input" onSubmit={askAI}>
+              <input
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder={copy.chatPlaceholder}
+                aria-label={copy.chatInputAria}
+                maxLength={3000}
+              />
+              <button
+                disabled={thinking || !prompt.trim()}
+                aria-label={copy.sendMessage}
+              >
+                <Send size={17} />
+              </button>
+            </form>
+            <p className="chat-disclaimer">{copy.chatDisclaimer}</p>
+            <button
+              type="button"
+              className="chat-resize-handle"
+              aria-label={copy.resizeAria}
+              title={copy.resizeAria}
+              onPointerDown={(event) => {
+                event.stopPropagation();
+                beginAssistantPanelInteraction(event, "resize");
+              }}
+              onKeyDown={resizeAssistantPanelWithKeyboard}
+            />
+          </aside>
+        )}
+
+        {authOpen && (
+          <div className="modal-backdrop" onClick={() => setAuthOpen(false)}>
+            <section
+              className="submit-modal auth-modal"
+              role="dialog"
+              aria-modal="true"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <button
+                className="modal-close"
+                type="button"
+                onClick={() => setAuthOpen(false)}
+                aria-label={copy.close}
+              >
+                <X />
+              </button>
+              <div className="modal-kicker">
+                <Sparkles size={15} /> AI LIBRARY
+              </div>
+              <h2>
+                {authMode === "register"
+                  ? copy.authTitleRegister
+                  : copy.authTitleLogin}
+              </h2>
+              <p className="modal-copy">{copy.authIntro}</p>
+              {authNotice && <p className="auth-notice">{authNotice}</p>}
+              <form className="submit-form auth-form" onSubmit={submitAuth}>
                 <label>
-                  {copy.confirmPassword}
+                  {copy.email}
                   <input
-                    name="confirmPassword"
+                    name="email"
+                    type="email"
+                    autoComplete="username"
+                    maxLength={254}
+                    required
+                  />
+                </label>
+                <label>
+                  {copy.password}
+                  <input
+                    name="password"
                     type="password"
-                    autoComplete="new-password"
-                    minLength={10}
+                    autoComplete={
+                      authMode === "register"
+                        ? "new-password"
+                        : "current-password"
+                    }
+                    minLength={authMode === "register" ? 10 : undefined}
                     maxLength={128}
                     required
                   />
                 </label>
-              )}
-              {authMode === "register" && <small>{copy.passwordHint}</small>}
-              {authError && (
-                <p className="auth-error" role="alert">
-                  {authError}
-                </p>
-              )}
-              <button className="button button-primary submit-button" disabled={authBusy}>
-                {authBusy
-                  ? "…"
-                  : authMode === "register"
-                    ? copy.createAccount
-                    : copy.continue}
-                <ArrowRight size={16} />
-              </button>
-            </form>
-            <button
-              type="button"
-              className="auth-switch"
-              onClick={() => {
-                setAuthMode((mode) => (mode === "register" ? "login" : "register"));
-                setAuthError("");
-              }}
-            >
-              {authMode === "register" ? copy.hasAccount : copy.noAccount}
-            </button>
-          </section>
-        </div>
-      )}
-
-      {submitOpen && (
-        <div className="modal-backdrop" onClick={() => setSubmitOpen(false)}>
-          <section
-            className="submit-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              className="modal-close"
-              onClick={() => setSubmitOpen(false)}
-              aria-label={copy.close}
-            >
-              <X />
-            </button>
-            {submitted ? (
-              <div className="success-state">
-                <div className="success-icon">
-                  <Check />
-                </div>
-                <h2>{copy.thanks}</h2>
-                <p>{copy.submittedReview}</p>
+                {authMode === "register" && (
+                  <label>
+                    {copy.confirmPassword}
+                    <input
+                      name="confirmPassword"
+                      type="password"
+                      autoComplete="new-password"
+                      minLength={10}
+                      maxLength={128}
+                      required
+                    />
+                  </label>
+                )}
+                {authMode === "register" && <small>{copy.passwordHint}</small>}
+                {authError && (
+                  <p className="auth-error" role="alert">
+                    {authError}
+                  </p>
+                )}
                 <button
-                  className="button button-primary"
-                  onClick={() => setSubmitOpen(false)}
+                  className="button button-primary submit-button"
+                  disabled={authBusy}
                 >
-                  {copy.done}
+                  {authBusy
+                    ? "…"
+                    : authMode === "register"
+                      ? copy.createAccount
+                      : copy.continue}
+                  <ArrowRight size={16} />
                 </button>
-              </div>
-            ) : (
-              <>
-                <div className="modal-kicker">
-                  <Sparkles size={15} /> {copy.communitySubmission}
-                </div>
-                <h2>{copy.submitTitle}</h2>
-                <p className="modal-copy">
-                  {copy.submitCopy}
-                </p>
-                <form className="submit-form" onSubmit={submitTool}>
-                  <label>
-                    {copy.toolName}
-                    <input
-                      name="name"
-                      required
-                      placeholder={copy.toolNamePlaceholder}
-                    />
-                  </label>
-                  <label>
-                    {copy.categoryLabel}
-                    <select
-                      name="category"
-                      required
-                      defaultValue="Productivity"
-                    >
-                      {categoryOptions
-                        .filter((c) => c !== "All")
-                        .map((c) => (
-                          <option key={c}>{c}</option>
-                        ))}
-                    </select>
-                  </label>
-                  <label>
-                    {copy.websiteUrl}
-                    <input
-                      name="url"
-                      type="url"
-                      required
-                      placeholder={copy.websitePlaceholder}
-                    />
-                  </label>
-                  <label>
-                    {copy.pricing}
-                    <select name="pricing" defaultValue="Freemium">
-                      {pricingOptions
-                        .filter((option) => option !== "All")
-                        .map((option) => (
-                          <option key={option} value={option}>
-                            {option === "Free"
-                              ? copy.free
-                              : option === "Freemium"
-                                ? copy.freemium
-                                : option === "Paid"
-                                  ? copy.paid
-                                  : copy.openSource}
-                          </option>
-                        ))}
-                    </select>
-                  </label>
-                  <label>
-                    {copy.description}
-                    <textarea
-                      name="description"
-                      required
-                      rows="3"
-                      placeholder={copy.descriptionPlaceholder}
-                    />
-                  </label>
-                  <button className="button button-primary submit-button">
-                    {copy.sendForReview} <ArrowRight size={16} />
+              </form>
+              <button
+                type="button"
+                className="auth-switch"
+                onClick={() => {
+                  setAuthMode((mode) =>
+                    mode === "register" ? "login" : "register",
+                  );
+                  setAuthError("");
+                }}
+              >
+                {authMode === "register" ? copy.hasAccount : copy.noAccount}
+              </button>
+            </section>
+          </div>
+        )}
+
+        {submitOpen && (
+          <div className="modal-backdrop" onClick={() => setSubmitOpen(false)}>
+            <section
+              className="submit-modal"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                className="modal-close"
+                onClick={() => setSubmitOpen(false)}
+                aria-label={copy.close}
+              >
+                <X />
+              </button>
+              {submitted ? (
+                <div className="success-state">
+                  <div className="success-icon">
+                    <Check />
+                  </div>
+                  <h2>{copy.thanks}</h2>
+                  <p>{copy.submittedReview}</p>
+                  <button
+                    className="button button-primary"
+                    onClick={() => setSubmitOpen(false)}
+                  >
+                    {copy.done}
                   </button>
-                  <small>
-                    {copy.reviewNotice}
-                  </small>
-                </form>
-              </>
-            )}
-          </section>
-        </div>
-      )}
-    </div>
-    <Footer language={language} />
+                </div>
+              ) : (
+                <>
+                  <div className="modal-kicker">
+                    <Sparkles size={15} /> {copy.communitySubmission}
+                  </div>
+                  <h2>{copy.submitTitle}</h2>
+                  <p className="modal-copy">{copy.submitCopy}</p>
+                  <form className="submit-form" onSubmit={submitTool}>
+                    <label>
+                      {copy.toolName}
+                      <input
+                        name="name"
+                        required
+                        placeholder={copy.toolNamePlaceholder}
+                      />
+                    </label>
+                    <label>
+                      {copy.categoryLabel}
+                      <select
+                        name="category"
+                        required
+                        defaultValue="Productivity"
+                      >
+                        {categoryOptions
+                          .filter((c) => c !== "All")
+                          .map((c) => (
+                            <option key={c}>{c}</option>
+                          ))}
+                      </select>
+                    </label>
+                    <label>
+                      {copy.websiteUrl}
+                      <input
+                        name="url"
+                        type="url"
+                        required
+                        placeholder={copy.websitePlaceholder}
+                      />
+                    </label>
+                    <label>
+                      {copy.pricing}
+                      <select name="pricing" defaultValue="Freemium">
+                        {pricingOptions
+                          .filter((option) => option !== "All")
+                          .map((option) => (
+                            <option key={option} value={option}>
+                              {option === "Free"
+                                ? copy.free
+                                : option === "Freemium"
+                                  ? copy.freemium
+                                  : option === "Paid"
+                                    ? copy.paid
+                                    : copy.openSource}
+                            </option>
+                          ))}
+                      </select>
+                    </label>
+                    <label>
+                      {copy.description}
+                      <textarea
+                        name="description"
+                        required
+                        rows="3"
+                        placeholder={copy.descriptionPlaceholder}
+                      />
+                    </label>
+                    <button className="button button-primary submit-button">
+                      {copy.sendForReview} <ArrowRight size={16} />
+                    </button>
+                    <small>{copy.reviewNotice}</small>
+                  </form>
+                </>
+              )}
+            </section>
+          </div>
+        )}
+      </div>
+      <Footer language={language} />
     </>
   );
 }
@@ -1561,9 +1602,5 @@ const root = document.getElementById("root");
 const isAdminRoute = window.location.pathname.replace(/\/$/, "") === "/admin";
 
 createRoot(root).render(
-  <React.StrictMode>
-    {isAdminRoute ? (
-      <AdminApp />
-    ) : <App />}
-  </React.StrictMode>,
+  <React.StrictMode>{isAdminRoute ? <AdminApp /> : <App />}</React.StrictMode>,
 );
