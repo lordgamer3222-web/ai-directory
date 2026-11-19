@@ -13,8 +13,8 @@ import rateLimit from "express-rate-limit";
 import { generateAIResponse } from "./services/aiProvider.js";
 
 const app = express();
-const PORT = Number(process.env.PORT) || 5001;
-const HOST = process.env.HOST || "0.0.0.0";
+const PORT = process.env.PORT || 10000;
+const HOST = "0.0.0.0";
 const serverDir = path.dirname(fileURLToPath(import.meta.url));
 const uploadDir = path.resolve(
   process.env.UPLOAD_DIR || path.join(serverDir, "uploads", "tool-icons"),
@@ -130,7 +130,8 @@ const userSessionSchema = new mongoose.Schema(
 );
 userSessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 const UserSession =
-  mongoose.models.UserSession || mongoose.model("UserSession", userSessionSchema);
+  mongoose.models.UserSession ||
+  mongoose.model("UserSession", userSessionSchema);
 
 const savedToolSchema = new mongoose.Schema(
   {
@@ -541,14 +542,13 @@ app.post("/api/auth/register", rateLimitUserAuth, async (req, res) => {
     return res.status(503).json({ error: "MongoDB is not connected." });
 
   const email =
-    typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+    typeof req.body?.email === "string"
+      ? req.body.email.trim().toLowerCase()
+      : "";
   const password =
     typeof req.body?.password === "string" ? req.body.password : "";
 
-  if (
-    email.length > 254 ||
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-  ) {
+  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: "Enter a valid email address." });
   }
   if (password.length < 10 || password.length > 128) {
@@ -582,7 +582,9 @@ app.post("/api/auth/login", rateLimitUserAuth, async (req, res) => {
     return res.status(503).json({ error: "MongoDB is not connected." });
 
   const email =
-    typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+    typeof req.body?.email === "string"
+      ? req.body.email.trim().toLowerCase()
+      : "";
   const password =
     typeof req.body?.password === "string" ? req.body.password : "";
 
@@ -650,10 +652,14 @@ app.post("/api/auth/merge-saved", async (req, res) => {
     if (!validVisitorId(visitorId))
       return res.status(400).json({ error: "A valid visitorId is required." });
 
-    const legacyItems = await SavedTool.find({ visitorId }).select("toolId").lean();
+    const legacyItems = await SavedTool.find({ visitorId })
+      .select("toolId")
+      .lean();
     const requestedIds = Array.isArray(req.body?.toolIds)
       ? req.body.toolIds
-          .filter((id) => typeof id === "string" && mongoose.isValidObjectId(id))
+          .filter(
+            (id) => typeof id === "string" && mongoose.isValidObjectId(id),
+          )
           .slice(0, 100)
       : [];
     const toolIds = [
@@ -767,7 +773,9 @@ const descriptionTranslationLimiter = rateLimit({
   limit: 25,
   standardHeaders: "draft-8",
   legacyHeaders: false,
-  message: { error: "Please wait a moment before translating more descriptions." },
+  message: {
+    error: "Please wait a moment before translating more descriptions.",
+  },
 });
 
 app.post(
@@ -775,7 +783,7 @@ app.post(
   descriptionTranslationLimiter,
   async (req, res) => {
     const targetLanguage =
-      ({ hi: "Hindi", fr: "French" })[req.body?.language] || "";
+      { hi: "Hindi", fr: "French" }[req.body?.language] || "";
     const requestedIds = req.body?.toolIds;
 
     if (!targetLanguage) {
@@ -809,7 +817,9 @@ app.post(
       const sourceById = new Map(sourceTools.map((tool) => [tool.id, tool]));
 
       if (toolIds.some((id) => !sourceById.has(id))) {
-        return res.status(404).json({ error: "A requested tool was not found." });
+        return res
+          .status(404)
+          .json({ error: "A requested tool was not found." });
       }
 
       const cacheKeyFor = (tool) =>
@@ -1102,7 +1112,8 @@ app.get("/api/saved-tools", async (req, res) => {
     return res.json({ saved: [], persistence: "local-only" });
   try {
     const user = await getSignedInUser(req);
-    if (!user) return res.status(401).json({ error: "Sign in to view saved tools." });
+    if (!user)
+      return res.status(401).json({ error: "Sign in to view saved tools." });
     const visitorId = accountSavedToolsKey(user._id);
     const items = await SavedTool.find({ visitorId })
       .populate("toolId")
@@ -1130,8 +1141,7 @@ app.post("/api/saved-tools", async (req, res) => {
     return res.status(400).json({ error: "A valid toolId is required." });
   try {
     const user = await getSignedInUser(req);
-    if (!user)
-      return res.status(401).json({ error: "Sign in to save tools." });
+    if (!user) return res.status(401).json({ error: "Sign in to save tools." });
     const visitorId = accountSavedToolsKey(user._id);
     if (!(await Tool.exists({ _id: toolId })))
       return res.status(404).json({ error: "AI tool not found." });
@@ -1154,8 +1164,7 @@ app.delete("/api/saved-tools/:toolId", async (req, res) => {
     return res.status(503).json({ error: "MongoDB is not connected." });
   try {
     const user = await getSignedInUser(req);
-    if (!user)
-      return res.status(401).json({ error: "Sign in to save tools." });
+    if (!user) return res.status(401).json({ error: "Sign in to save tools." });
     const visitorId = accountSavedToolsKey(user._id);
     const toolId = String(req.params.toolId || "").trim();
     if (!mongoose.isValidObjectId(toolId))
@@ -1327,7 +1336,7 @@ function rankAITools(message, tools) {
       (a, b) =>
         b.score - a.score ||
         String(a.tool.name).localeCompare(String(b.tool.name)),
-    )
+    );
 }
 
 function removeInlineUrls(text) {
@@ -1363,7 +1372,7 @@ app.post("/api/ai/ask", aiRateLimiter, async (req, res) => {
   const requestedLanguage =
     typeof req.body?.language === "string" ? req.body.language : "en";
   const responseLanguage =
-    ({ en: "English", hi: "Hindi", fr: "French" })[requestedLanguage] ||
+    { en: "English", hi: "Hindi", fr: "French" }[requestedLanguage] ||
     "English";
   const history = Array.isArray(req.body?.history)
     ? req.body.history
@@ -1512,7 +1521,9 @@ ${JSON.stringify(message)}`;
       isToolRecommendationRequest(message) &&
       rankedEntries[0]?.score > 0
     ) {
-      for (const { tool } of rankedEntries.filter((entry) => entry.score > 0).slice(0, 3)) {
+      for (const { tool } of rankedEntries
+        .filter((entry) => entry.score > 0)
+        .slice(0, 3)) {
         selected.push({
           id: tool.id,
           name: tool.name,
@@ -1534,7 +1545,8 @@ ${JSON.stringify(message)}`;
     };
     const answer =
       removeInlineUrls(generated?.answer) ||
-      answerFallbacks[requestedLanguage] || answerFallbacks.en;
+      answerFallbacks[requestedLanguage] ||
+      answerFallbacks.en;
 
     return res.json({
       answer,
@@ -1602,7 +1614,7 @@ async function start() {
   }
 
   app.listen(PORT, HOST, () => {
-    console.log(`AI Library API listening on http://localhost:${PORT}`);
+    console.log(`AI Library API listening on ${HOST}:${PORT}`);
   });
 }
 
