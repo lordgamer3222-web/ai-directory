@@ -9,7 +9,7 @@ const Footer = ({ language = "en" }) => {
       <p>{copy.createdBy}</p>
       <p>
         {copy.contact}:{" "}
-        <a href="mailto:ravitripathi@gmail.com">ravitripathi@gmail.com</a>
+        <a href="mailto:ravitripathi3222@gmail.com">ravitripathi3222@gmail.com</a>
       </p>
     </footer>
   );

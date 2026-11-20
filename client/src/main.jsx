@@ -16,11 +16,17 @@ import {
   Bookmark,
   Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Code2,
   ExternalLink,
   LayoutGrid,
   Menu,
+  Maximize2,
   MessageCircle,
+  Mic,
+  MicOff,
+  Minimize2,
   Search,
   Send,
   Sparkles,
@@ -99,6 +105,49 @@ const fallbackTools = [
 const initialTools =
   Array.isArray(toolsData) && toolsData.length ? toolsData : fallbackTools;
 const pricingOptions = ["All", "Free", "Freemium", "Paid", "Open Source"];
+const PAGE_SIZE = 12;
+const POPULAR_TOOL_NAMES = new Set([
+  "ChatGPT",
+  "Claude",
+  "Google Gemini",
+  "Microsoft Copilot",
+  "Perplexity",
+  "DeepSeek",
+  "Midjourney",
+  "GitHub Copilot",
+  "Canva Magic Studio",
+  "Cursor",
+  "ElevenLabs",
+  "NotebookLM",
+]);
+
+function toolKey(tool) {
+  return tool?._id || tool?.id || tool?.name || "";
+}
+
+function shuffleItems(items) {
+  const shuffled = [...items];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [
+      shuffled[swapIndex],
+      shuffled[index],
+    ];
+  }
+  return shuffled;
+}
+
+function shuffleCatalog(items) {
+  const popular = [];
+  const remaining = [];
+  for (const tool of items) {
+    (tool.featured || POPULAR_TOOL_NAMES.has(tool.name)
+      ? popular
+      : remaining
+    ).push(tool);
+  }
+  return [...shuffleItems(popular), ...shuffleItems(remaining)].map(toolKey);
+}
 
 function readStoredValue(key, allowedValues, fallback) {
   try {
@@ -254,6 +303,10 @@ function FormattedAssistantText({ text }) {
 
 function App() {
   const [tools, setTools] = useState(() => initialTools);
+  const [catalogOrder, setCatalogOrder] = useState(() =>
+    shuffleCatalog(initialTools),
+  );
+  const [currentPage, setCurrentPage] = useState(1);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
   const [price, setPrice] = useState("All");
@@ -313,6 +366,10 @@ function App() {
   });
   const [toolsLoading, setToolsLoading] = useState(true);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [assistantFullPage, setAssistantFullPage] = useState(false);
+  const [voiceListening, setVoiceListening] = useState(false);
+  const [voiceStatus, setVoiceStatus] = useState("");
+  const speechRecognitionRef = useRef(null);
   const [messages, setMessages] = useState([
     {
       role: "assistant",
@@ -338,7 +395,7 @@ function App() {
         .querySelector('meta[name="theme-color"]')
         ?.setAttribute(
           "content",
-          activeTheme === "dark" ? "#060d22" : "#f5f4ed",
+          activeTheme === "dark" ? "#141513" : "#f5f4ed",
         );
     };
     applyPreferences();
@@ -362,124 +419,95 @@ function App() {
   }, [language]);
 
   useEffect(() => {
-    if (language === "en" || toolsLoading || tools.length === 0) {
-      setDescriptionTranslationStatus("idle");
-      return undefined;
-    }
-
-    let active = true;
-    const cachedForLanguage = localizedDescriptions[language] || {};
-    const missing = tools.filter(
-      (tool) =>
-        tool.id &&
-        tool.description &&
-        cachedForLanguage[tool.id]?.source !== tool.description,
-    );
-
-    if (!missing.length) {
-      setDescriptionTranslationStatus("idle");
-      return undefined;
-    }
-
-    setDescriptionTranslationStatus("loading");
-
-    async function translateCatalogDescriptions() {
-      let nextCache = localizedDescriptions;
-      let failed = false;
-      const batches = [];
-      for (let index = 0; index < missing.length; index += 8) {
-        batches.push(missing.slice(index, index + 8));
-      }
-
-      for (let index = 0; index < batches.length; index += 3) {
-        const batchGroup = batches.slice(index, index + 3);
-        const results = await Promise.allSettled(
-          batchGroup.map((batch) => {
-            const requestKey = JSON.stringify([
-              language,
-              batch.map(({ id, description }) => [id, description]),
-            ]);
-            let request = translationRequestsRef.current.get(requestKey);
-            if (!request) {
-              request = apiFetch("/api/tools/translate-descriptions", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  language,
-                  toolIds: batch.map((tool) => tool.id),
-                }),
-              }).then(async (response) => {
-                const data = await response.json();
-                if (!response.ok)
-                  throw new Error(data.error || "Translation unavailable");
-                return data.translations;
-              });
-              translationRequestsRef.current.set(requestKey, request);
-              request.then(
-                () => translationRequestsRef.current.delete(requestKey),
-                () => translationRequestsRef.current.delete(requestKey),
-              );
-            }
-            return request;
-          }),
-        );
-
-        if (!active) return;
-        const translated = results.flatMap((result) => {
-          if (result.status === "rejected") {
-            failed = true;
-            return [];
-          }
-          return Array.isArray(result.value) ? result.value : [];
-        });
-
-        if (translated.length) {
-          const updatedLanguageCache = {
-            ...(nextCache[language] || {}),
-          };
-          for (const item of translated) {
-            const sourceTool = tools.find((tool) => tool.id === item.id);
-            if (
-              sourceTool &&
-              typeof item.description === "string" &&
-              item.description.trim()
-            ) {
-              updatedLanguageCache[item.id] = {
-                source: sourceTool.description,
-                text: item.description.trim(),
-              };
-            }
-          }
-          nextCache = { ...nextCache, [language]: updatedLanguageCache };
-          setLocalizedDescriptions(nextCache);
-          try {
-            localStorage.setItem(
-              "ai-library-description-translations",
-              JSON.stringify(nextCache),
-            );
-          } catch {}
-        }
-
-        if (failed) break;
-      }
-
-      if (active) setDescriptionTranslationStatus(failed ? "error" : "idle");
-    }
-
-    translateCatalogDescriptions().catch(() => {
-      if (active) setDescriptionTranslationStatus("error");
-    });
-
+    if (!assistantOpen || !assistantFullPage) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     return () => {
-      active = false;
+      document.body.style.overflow = previousOverflow;
     };
-  }, [language, tools, toolsLoading]);
+  }, [assistantOpen, assistantFullPage]);
+
+  useEffect(
+    () => () => {
+      speechRecognitionRef.current?.abort?.();
+    },
+    [],
+  );
 
   function descriptionForTool(tool) {
     const translated = localizedDescriptions[language]?.[tool.id];
     return translated?.source === tool.description
       ? translated.text
       : tool.description;
+  }
+
+  function openAssistant() {
+    setAssistantFullPage(true);
+    setAssistantOpen(true);
+    setMobileMenu(false);
+  }
+
+  function closeAssistant() {
+    speechRecognitionRef.current?.stop?.();
+    speechRecognitionRef.current = null;
+    setVoiceListening(false);
+    setVoiceStatus("");
+    setAssistantOpen(false);
+    setAssistantFullPage(false);
+  }
+
+  function toggleVoiceInput() {
+    if (voiceListening) {
+      speechRecognitionRef.current?.stop?.();
+      setVoiceStatus("");
+      return;
+    }
+
+    const Recognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Recognition) {
+      setVoiceStatus(copy.voiceUnavailable);
+      return;
+    }
+
+    const recognition = new Recognition();
+    recognition.lang =
+      { en: "en-US", hi: "hi-IN", fr: "fr-FR" }[language] || "en-US";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onstart = () => {
+      setVoiceListening(true);
+      setVoiceStatus(copy.listening);
+    };
+    recognition.onresult = (event) => {
+      const transcript = event.results?.[0]?.[0]?.transcript?.trim();
+      if (transcript) {
+        setPrompt((current) =>
+          [current.trim(), transcript].filter(Boolean).join(" "),
+        );
+      }
+      setVoiceStatus("");
+    };
+    recognition.onerror = (event) => {
+      setVoiceListening(false);
+      setVoiceStatus(
+        event.error === "not-allowed" || event.error === "service-not-allowed"
+          ? copy.voicePermissionDenied
+          : copy.voiceUnavailable,
+      );
+    };
+    recognition.onend = () => {
+      setVoiceListening(false);
+      speechRecognitionRef.current = null;
+    };
+    speechRecognitionRef.current = recognition;
+    try {
+      recognition.start();
+    } catch {
+      speechRecognitionRef.current = null;
+      setVoiceListening(false);
+      setVoiceStatus(copy.voiceUnavailable);
+    }
   }
 
   function saveAssistantPanelLayout(layout) {
@@ -639,7 +667,10 @@ function App() {
     apiFetch("/api/tools")
       .then((response) => (response.ok ? response.json() : Promise.reject()))
       .then((data) => {
-        if (active && Array.isArray(data)) setTools(data);
+        if (active && Array.isArray(data)) {
+          setTools(data);
+          setCatalogOrder(shuffleCatalog(data));
+        }
       })
       .catch(() => {})
       .finally(() => {
@@ -715,6 +746,12 @@ function App() {
     );
     if (showSavedOnly)
       list = list.filter((t) => saved.includes(t._id || t.name));
+    const orderIndex = new Map(catalogOrder.map((key, index) => [key, index]));
+    list = [...list].sort(
+      (a, b) =>
+        (orderIndex.get(toolKey(a)) ?? Number.MAX_SAFE_INTEGER) -
+        (orderIndex.get(toolKey(b)) ?? Number.MAX_SAFE_INTEGER),
+    );
     if (sort === "A–Z")
       list = [...list].sort((a, b) => a.name.localeCompare(b.name));
     if (sort === "Free first")
@@ -725,6 +762,7 @@ function App() {
     return list;
   }, [
     tools,
+    catalogOrder,
     localizedDescriptions,
     language,
     query,
@@ -734,6 +772,135 @@ function App() {
     showSavedOnly,
     saved,
   ]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [query, category, price, sort, showSavedOnly]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const activePage = Math.min(currentPage, totalPages);
+  const pageTools = useMemo(
+    () => filtered.slice((activePage - 1) * PAGE_SIZE, activePage * PAGE_SIZE),
+    [filtered, activePage],
+  );
+
+  useEffect(() => {
+    setCurrentPage((page) => Math.min(page, totalPages));
+  }, [totalPages]);
+
+  useEffect(() => {
+    if (language === "en" || toolsLoading || tools.length === 0) {
+      setDescriptionTranslationStatus("idle");
+      return undefined;
+    }
+
+    let active = true;
+    const cachedForLanguage = localizedDescriptions[language] || {};
+    const missing = pageTools.filter(
+      (tool) =>
+        tool.id &&
+        tool.description &&
+        cachedForLanguage[tool.id]?.source !== tool.description,
+    );
+
+    if (!missing.length) {
+      setDescriptionTranslationStatus("idle");
+      return undefined;
+    }
+
+    setDescriptionTranslationStatus("loading");
+
+    async function translateCatalogDescriptions() {
+      let nextCache = localizedDescriptions;
+      let failed = false;
+      const batches = [];
+      for (let index = 0; index < missing.length; index += 8) {
+        batches.push(missing.slice(index, index + 8));
+      }
+
+      for (let index = 0; index < batches.length; index += 3) {
+        const batchGroup = batches.slice(index, index + 3);
+        const results = await Promise.allSettled(
+          batchGroup.map((batch) => {
+            const requestKey = JSON.stringify([
+              language,
+              batch.map(({ id, description }) => [id, description]),
+            ]);
+            let request = translationRequestsRef.current.get(requestKey);
+            if (!request) {
+              request = apiFetch("/api/tools/translate-descriptions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  language,
+                  toolIds: batch.map((tool) => tool.id),
+                }),
+              }).then(async (response) => {
+                const data = await response.json();
+                if (!response.ok)
+                  throw new Error(data.error || "Translation unavailable");
+                return data.translations;
+              });
+              translationRequestsRef.current.set(requestKey, request);
+              request.then(
+                () => translationRequestsRef.current.delete(requestKey),
+                () => translationRequestsRef.current.delete(requestKey),
+              );
+            }
+            return request;
+          }),
+        );
+
+        if (!active) return;
+        const translated = results.flatMap((result) => {
+          if (result.status === "rejected") {
+            failed = true;
+            return [];
+          }
+          return Array.isArray(result.value) ? result.value : [];
+        });
+
+        if (translated.length) {
+          const updatedLanguageCache = {
+            ...(nextCache[language] || {}),
+          };
+          for (const item of translated) {
+            const sourceTool = tools.find((tool) => tool.id === item.id);
+            if (
+              sourceTool &&
+              typeof item.description === "string" &&
+              item.description.trim()
+            ) {
+              updatedLanguageCache[item.id] = {
+                source: sourceTool.description,
+                text: item.description.trim(),
+              };
+            }
+          }
+          nextCache = { ...nextCache, [language]: updatedLanguageCache };
+          setLocalizedDescriptions(nextCache);
+          try {
+            localStorage.setItem(
+              "ai-library-description-translations",
+              JSON.stringify(nextCache),
+            );
+          } catch {}
+        }
+
+        if (failed) break;
+      }
+
+      if (active) setDescriptionTranslationStatus(failed ? "error" : "idle");
+    }
+
+    translateCatalogDescriptions().catch(() => {
+      if (active) setDescriptionTranslationStatus("error");
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [language, pageTools, tools, toolsLoading]);
 
   async function toggleSaved(tool) {
     if (!currentUser) {
@@ -933,17 +1100,10 @@ function App() {
           </button>
           <nav className={mobileMenu ? "nav-links open" : "nav-links"}>
             <a href="#explore" onClick={() => setMobileMenu(false)}>
-              {copy.explore}
+              {copy.toolsNav}
             </a>
-            <a
-              href="#explore"
-              onClick={() => {
-                setCategory("All");
-                setShowSavedOnly(false);
-                setMobileMenu(false);
-              }}
-            >
-              {copy.categories}
+            <a href="#about-contact" onClick={() => setMobileMenu(false)}>
+              {copy.aboutNav}
             </a>
             <button
               className="nav-text-button"
@@ -1013,9 +1173,9 @@ function App() {
           <div className="nav-actions">
             <button
               className="button button-primary button-small"
-              onClick={() => setAssistantOpen(true)}
+              onClick={openAssistant}
             >
-              <Sparkles size={15} /> {copy.askAI}
+              <Sparkles size={15} /> {copy.talkToAiNav}
             </button>
           </div>
         </header>
@@ -1042,10 +1202,7 @@ function App() {
                 <Search size={18} /> {copy.exploreTools}{" "}
                 <ArrowRight size={16} />
               </button>
-              <button
-                className="button button-outline"
-                onClick={() => setAssistantOpen(true)}
-              >
+              <button className="button button-outline" onClick={openAssistant}>
                 <Sparkles size={17} /> {copy.askAI}
               </button>
             </div>
@@ -1064,7 +1221,7 @@ function App() {
                 className="search-ai"
                 onClick={() => {
                   setPrompt(query);
-                  setAssistantOpen(true);
+                  openAssistant();
                 }}
                 title={copy.askAiTitle}
               >
@@ -1149,7 +1306,7 @@ function App() {
               </div>
             )}
             <div className="tool-grid">
-              {filtered.map((tool, i) => (
+              {pageTools.map((tool, i) => (
                 <article
                   className="tool-card"
                   style={{ "--delay": `${i * 70}ms` }}
@@ -1157,7 +1314,6 @@ function App() {
                 >
                   <div className={`tool-icon icon-${i % 4}`}>
                     <ToolLogo tool={tool} size={58} />
-                    <span className="icon-spark">✦</span>
                   </div>
                   <div className="card-title-row">
                     <h2>{tool.name}</h2>
@@ -1216,6 +1372,53 @@ function App() {
                 </article>
               ))}
             </div>
+            {!toolsLoading && filtered.length > PAGE_SIZE && (
+              <nav className="pagination" aria-label={copy.pagination}>
+                <button
+                  type="button"
+                  className="pagination-step"
+                  onClick={() =>
+                    setCurrentPage((page) => Math.max(1, page - 1))
+                  }
+                  disabled={activePage === 1}
+                >
+                  <ChevronLeft size={16} />
+                  {copy.previousPage}
+                </button>
+                <div className="pagination-pages">
+                  {Array.from({ length: totalPages }, (_, index) => {
+                    const page = index + 1;
+                    return (
+                      <button
+                        type="button"
+                        key={page}
+                        className={activePage === page ? "active" : ""}
+                        aria-current={activePage === page ? "page" : undefined}
+                        onClick={() => setCurrentPage(page)}
+                      >
+                        {page}
+                      </button>
+                    );
+                  })}
+                </div>
+                <span className="pagination-count">
+                  {copy.pageOf
+                    .replace("{page}", String(activePage))
+                    .replace("{pages}", String(totalPages))}
+                </span>
+                <button
+                  type="button"
+                  className="pagination-step"
+                  onClick={() =>
+                    setCurrentPage((page) => Math.min(totalPages, page + 1))
+                  }
+                  disabled={activePage === totalPages}
+                >
+                  {copy.nextPage}
+                  <ChevronRight size={16} />
+                </button>
+              </nav>
+            )}
             {toolsLoading && (
               <div className="loading-state" role="status">
                 {copy.loadingTools}
@@ -1240,6 +1443,21 @@ function App() {
               </div>
             )}
           </section>
+          <section className="about-section" id="about-contact">
+            <div>
+              <span className="about-kicker">AI LIBRARY</span>
+              <h2>{copy.aboutTitle}</h2>
+              <p>{copy.aboutCopy}</p>
+            </div>
+            <a
+              className="about-contact-link"
+              href="mailto:ravitripathi3222@gmail.com"
+            >
+              <span>{copy.contact}</span>
+              <b>ravitripathi3222@gmail.com</b>
+              <ArrowRight size={17} />
+            </a>
+          </section>
           <section className="bottom-cta">
             <div className="cta-icon">
               <Sparkles />
@@ -1259,22 +1477,30 @@ function App() {
             </button>
           </section>
         </main>
-        <button
-          className="ask-fab"
-          onClick={() => setAssistantOpen((v) => !v)}
-          aria-label={copy.openAssistant}
-        >
-          <span className="fab-glow">
-            <MessageCircle size={23} />
-          </span>
-          <b>Ask Me</b>
-        </button>
+        {!assistantOpen && (
+          <button
+            className="ask-fab"
+            onClick={openAssistant}
+            aria-label={copy.openAssistant}
+          >
+            <span className="fab-glow">
+              <MessageCircle size={23} />
+            </span>
+            <b>Ask Me</b>
+          </button>
+        )}
         {assistantOpen && (
           <aside
             ref={assistantPanelRef}
-            className="chat-panel"
+            className={
+              assistantFullPage
+                ? "chat-panel chat-panel-fullpage"
+                : "chat-panel"
+            }
+            role="dialog"
+            aria-modal={assistantFullPage || undefined}
             style={
-              assistantLayout
+              !assistantFullPage && assistantLayout
                 ? {
                     left: `${assistantLayout.left}px`,
                     top: `${assistantLayout.top}px`,
@@ -1291,10 +1517,12 @@ function App() {
           >
             <div
               className="chat-header"
-              onPointerDown={(event) =>
-                beginAssistantPanelInteraction(event, "move")
+              onPointerDown={
+                assistantFullPage
+                  ? undefined
+                  : (event) => beginAssistantPanelInteraction(event, "move")
               }
-              title={copy.dragHint}
+              title={assistantFullPage ? undefined : copy.dragHint}
             >
               <div className="chat-avatar">
                 <Sparkles size={18} />
@@ -1306,7 +1534,28 @@ function App() {
                 <small>{copy.chatSubtitle}</small>
               </div>
               <button
-                onClick={() => setAssistantOpen(false)}
+                type="button"
+                onClick={() => setAssistantFullPage((fullPage) => !fullPage)}
+                aria-label={
+                  assistantFullPage
+                    ? copy.useFloatingAssistant
+                    : copy.openFullPageAssistant
+                }
+                title={
+                  assistantFullPage
+                    ? copy.useFloatingAssistant
+                    : copy.openFullPageAssistant
+                }
+              >
+                {assistantFullPage ? (
+                  <Minimize2 size={18} />
+                ) : (
+                  <Maximize2 size={18} />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={closeAssistant}
                 aria-label={copy.closeAssistant}
               >
                 <X size={19} />
@@ -1369,24 +1618,55 @@ function App() {
                 maxLength={3000}
               />
               <button
+                type="button"
+                className={
+                  voiceListening
+                    ? "voice-input-button listening"
+                    : "voice-input-button"
+                }
+                onClick={toggleVoiceInput}
+                disabled={
+                  !window.SpeechRecognition && !window.webkitSpeechRecognition
+                }
+                aria-label={
+                  voiceListening ? copy.stopVoiceInput : copy.voiceInput
+                }
+                title={
+                  !window.SpeechRecognition && !window.webkitSpeechRecognition
+                    ? copy.voiceUnavailable
+                    : voiceListening
+                      ? copy.stopVoiceInput
+                      : copy.voiceInput
+                }
+              >
+                {voiceListening ? <MicOff size={17} /> : <Mic size={17} />}
+              </button>
+              <button
                 disabled={thinking || !prompt.trim()}
                 aria-label={copy.sendMessage}
               >
                 <Send size={17} />
               </button>
             </form>
+            {voiceStatus && (
+              <p className="voice-status" role="status">
+                {voiceStatus}
+              </p>
+            )}
             <p className="chat-disclaimer">{copy.chatDisclaimer}</p>
-            <button
-              type="button"
-              className="chat-resize-handle"
-              aria-label={copy.resizeAria}
-              title={copy.resizeAria}
-              onPointerDown={(event) => {
-                event.stopPropagation();
-                beginAssistantPanelInteraction(event, "resize");
-              }}
-              onKeyDown={resizeAssistantPanelWithKeyboard}
-            />
+            {!assistantFullPage && (
+              <button
+                type="button"
+                className="chat-resize-handle"
+                aria-label={copy.resizeAria}
+                title={copy.resizeAria}
+                onPointerDown={(event) => {
+                  event.stopPropagation();
+                  beginAssistantPanelInteraction(event, "resize");
+                }}
+                onKeyDown={resizeAssistantPanelWithKeyboard}
+              />
+            )}
           </aside>
         )}
 
