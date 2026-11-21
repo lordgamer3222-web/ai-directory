@@ -23,7 +23,8 @@ A responsive AI tools directory built with React, Vite, Express, MongoDB/Mongoos
    - `GEMINI_API_KEY`: your private Gemini key. Keep it on the server; never use a `VITE_` variable for it.
    - `GEMINI_MODEL`: a model enabled for your Gemini account.
    - `ADMIN_TOKEN`: set a unique random value with at least 32 characters. For example, generate one with `openssl rand -hex 32`.
-   - `CLIENT_ORIGIN`: the deployed frontend origin. Multiple origins can be comma-separated.
+   - `CLIENT_ORIGIN`: the deployed frontend origin. Multiple origins can be comma-separated. Include the exact HTTPS origin for each frontend domain.
+   - `RESEND_API_KEY` and `PASSWORD_RESET_FROM`: a Resend API key and sender address on a verified domain for email verification codes.
 
 3. Install packages and start the app from the project root:
 
@@ -51,6 +52,12 @@ On the first successful MongoDB startup after this upgrade, the app assigns IDs 
 The Ask Gemini endpoint reads the catalog from MongoDB and sends a limited set of matching records to Gemini. Gemini can select tool IDs and explain the match, but the backend rejects unknown IDs and adds names, descriptions, pricing, icons, and official URLs from MongoDB. The chat renders those recommendations as cards with clickable official website links. URLs in generated text are removed so a model response cannot create a link that bypasses the catalog.
 
 MongoDB and Gemini credentials are required for AI recommendations. If either is missing, the page shows a configuration message and the regular directory continues to work.
+
+## Password reset email
+
+Forgot-password verification codes are sent through Resend. Verify your sending domain in Resend, then set `RESEND_API_KEY` and `PASSWORD_RESET_FROM` in the server environment (for example, `AI Library <noreply@your-domain.com>`). Codes expire after 10 minutes and are limited to five code attempts. The API returns a generic confirmation whether or not an account exists for the submitted address.
+
+In production, account cookies use `SameSite=None; Secure` so the browser can send them between a custom frontend domain and the Render API. Keep the site on HTTPS and set `CLIENT_ORIGIN` to the exact frontend origin(s).
 
 ## Google AdSense Auto Ads
 

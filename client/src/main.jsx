@@ -349,6 +349,9 @@ function App() {
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState("");
   const [authNotice, setAuthNotice] = useState("");
+  const [authEmail, setAuthEmail] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const savingToolsRef = useRef(new Set());
   const [showSavedOnly, setShowSavedOnly] = useState(false);
   const [visitorId] = useState(() => {
     try {
@@ -688,15 +691,23 @@ function App() {
       .then(async (session) => {
         if (!active || !session?.user) return;
         setCurrentUser(session.user);
-        await apiFetch("/api/auth/merge-saved", {
+        const mergeResponse = await apiFetch("/api/auth/merge-saved", {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ visitorId, toolIds: saved }),
         });
+        if (mergeResponse.status === 401) {
+          setCurrentUser(null);
+          return;
+        }
         const response = await apiFetch("/api/saved-tools", {
           credentials: "include",
         });
+        if (response.status === 401) {
+          setCurrentUser(null);
+          return;
+        }
         if (!response.ok) return;
         const data = await response.json();
         if (!active || !Array.isArray(data.saved)) return;
@@ -910,30 +921,60 @@ function App() {
       setAuthOpen(true);
       return;
     }
+
     const key = tool._id || tool.name;
+    const lockKey = String(key);
+    if (savingToolsRef.current.has(lockKey)) return;
     const wasSaved = saved.includes(key);
-    const next = wasSaved ? saved.filter((x) => x !== key) : [...saved, key];
-    setSaved(next);
+    savingToolsRef.current.add(lockKey);
+    setSaveError("");
+
+    const updateSaved = (transform) => {
+      setSaved((current) => {
+        const next = transform(current);
+        try {
+          localStorage.setItem("ai-library-saved-tools", JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+    };
+
     try {
-      localStorage.setItem("ai-library-saved-tools", JSON.stringify(next));
-    } catch {}
-    if (!tool._id) return;
-    try {
-      const response = await apiFetch(
-        `/api/saved-tools${wasSaved ? `/${encodeURIComponent(tool._id)}` : ""}`,
-        {
-          method: wasSaved ? "DELETE" : "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: wasSaved ? undefined : JSON.stringify({ toolId: tool._id }),
-        },
-      );
-      if (!response.ok) throw new Error("Save sync unavailable");
-    } catch {
-      setSaved(saved);
-      try {
-        localStorage.setItem("ai-library-saved-tools", JSON.stringify(saved));
-      } catch {}
+      if (tool._id) {
+        const response = await apiFetch(
+          `/api/saved-tools${wasSaved ? `/${encodeURIComponent(tool._id)}` : ""}`,
+          {
+            method: wasSaved ? "DELETE" : "POST",
+            headers: { "Content-Type": "application/json" },
+            body: wasSaved ? undefined : JSON.stringify({ toolId: tool._id }),
+          },
+        );
+        if (response.status === 401) {
+          setCurrentUser(null);
+          setAuthMode("login");
+          setAuthError("");
+          setAuthNotice(copy.sessionExpired);
+          setAuthOpen(true);
+          throw new Error(copy.sessionExpired);
+        }
+        if (!response.ok) {
+          throw new Error(
+            response.status === 503 ? copy.authDatabase : copy.saveError,
+          );
+        }
+      }
+
+      updateSaved((current) => {
+        const exists = current.includes(key);
+        if (wasSaved) {
+          return exists ? current.filter((item) => item !== key) : current;
+        }
+        return exists ? current : [...current, key];
+      });
+    } catch (error) {
+      setSaveError(error.message || copy.saveError);
+    } finally {
+      savingToolsRef.current.delete(lockKey);
     }
   }
 
@@ -941,52 +982,93 @@ function App() {
     e.preventDefault();
     setAuthError("");
     const form = new FormData(e.currentTarget);
-    const email = String(form.get("email") || "").trim();
+    const email = String(form.get("email") || authEmail).trim().toLowerCase();
     const password = String(form.get("password") || "");
-    if (authMode === "register" && password !== form.get("confirmPassword")) {
+    setAuthEmail(email);
+
+    if (
+      ["register", "reset"].includes(authMode) &&
+      password !== form.get("confirmPassword")
+    ) {
       setAuthError(copy.passwordMismatch);
       return;
     }
+
     setAuthBusy(true);
     try {
-      const response = await apiFetch(
-        `/api/auth/${authMode === "register" ? "register" : "login"}`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-        },
-      );
-      const data = await response.json();
-      if (!response.ok)
-        throw new Error(
-          {
-            401: copy.authInvalid,
-            409: copy.emailInUse,
-            429: copy.authRateLimit,
-            503: copy.authDatabase,
-          }[response.status] ||
-            data.error ||
-            copy.authGenericError,
-        );
-      setCurrentUser(data.user);
-      await apiFetch("/api/auth/merge-saved", {
+      const endpoint =
+        authMode === "register"
+          ? "/api/auth/register"
+          : authMode === "forgot"
+            ? "/api/auth/forgot-password"
+            : authMode === "reset"
+              ? "/api/auth/reset-password"
+              : "/api/auth/login";
+      const payload = { email };
+      if (authMode === "reset") {
+        payload.code = String(form.get("code") || "").trim();
+        payload.password = password;
+      } else if (["login", "register"].includes(authMode)) {
+        payload.password = password;
+      }
+      const response = await apiFetch(endpoint, {
         method: "POST",
-        credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ visitorId, toolIds: saved }),
+        body: JSON.stringify(payload),
       });
-      const savedResponse = await apiFetch("/api/saved-tools", {
-        credentials: "include",
-      });
-      if (savedResponse.ok) {
-        const savedData = await savedResponse.json();
-        const ids = (savedData.saved || []).map((item) => item.toolId);
-        setSaved(ids);
-        try {
-          localStorage.setItem("ai-library-saved-tools", JSON.stringify(ids));
-        } catch {}
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const message =
+          response.status === 429
+            ? copy.authRateLimit
+            : response.status === 503
+              ? authMode === "forgot" &&
+                data.error === "Password reset email is not configured."
+                ? copy.resetEmailUnavailable
+                : copy.authDatabase
+              : response.status === 400 && authMode === "reset"
+                ? copy.resetCodeInvalid
+                : response.status === 401
+                  ? copy.authInvalid
+                  : response.status === 409
+                    ? copy.emailInUse
+                    : data.error || copy.authGenericError;
+        throw new Error(message);
+      }
+
+      if (authMode === "forgot") {
+        setAuthMode("reset");
+        setAuthNotice(copy.resetCodeSent);
+        return;
+      }
+
+      setCurrentUser(data.user);
+      try {
+        const mergeResponse = await apiFetch("/api/auth/merge-saved", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ visitorId, toolIds: saved }),
+        });
+        if (mergeResponse.status === 401) {
+          setCurrentUser(null);
+          throw new Error(copy.sessionExpired);
+        }
+        const savedResponse = await apiFetch("/api/saved-tools");
+        if (savedResponse.status === 401) {
+          setCurrentUser(null);
+          throw new Error(copy.sessionExpired);
+        }
+        if (savedResponse.ok) {
+          const savedData = await savedResponse.json();
+          const ids = (savedData.saved || []).map((item) => item.toolId);
+          setSaved(ids);
+          try {
+            localStorage.setItem("ai-library-saved-tools", JSON.stringify(ids));
+          } catch {}
+        }
+      } catch (error) {
+        if (error.message === copy.sessionExpired) throw error;
+        setSaveError(copy.saveError);
       }
       setAuthOpen(false);
       setAuthNotice("");
@@ -1304,6 +1386,11 @@ function App() {
                   ? copy.translatingDescriptions
                   : copy.translationUnavailable}
               </div>
+            )}
+            {saveError && (
+              <p className="saved-error" role="status">
+                {saveError}
+              </p>
             )}
             <div className="tool-grid">
               {pageTools.map((tool, i) => (
@@ -1692,9 +1779,19 @@ function App() {
               <h2>
                 {authMode === "register"
                   ? copy.authTitleRegister
-                  : copy.authTitleLogin}
+                  : authMode === "forgot"
+                    ? copy.forgotPasswordTitle
+                    : authMode === "reset"
+                      ? copy.resetPasswordTitle
+                      : copy.authTitleLogin}
               </h2>
-              <p className="modal-copy">{copy.authIntro}</p>
+              <p className="modal-copy">
+                {authMode === "forgot"
+                  ? copy.forgotPasswordIntro
+                  : authMode === "reset"
+                    ? copy.resetPasswordIntro
+                    : copy.authIntro}
+              </p>
               {authNotice && <p className="auth-notice">{authNotice}</p>}
               <form className="submit-form auth-form" onSubmit={submitAuth}>
                 <label>
@@ -1704,25 +1801,48 @@ function App() {
                     type="email"
                     autoComplete="username"
                     maxLength={254}
+                    value={authEmail}
+                    onChange={(event) => setAuthEmail(event.target.value)}
+                    readOnly={authMode === "reset"}
                     required
                   />
                 </label>
-                <label>
-                  {copy.password}
-                  <input
-                    name="password"
-                    type="password"
-                    autoComplete={
-                      authMode === "register"
-                        ? "new-password"
-                        : "current-password"
-                    }
-                    minLength={authMode === "register" ? 10 : undefined}
-                    maxLength={128}
-                    required
-                  />
-                </label>
-                {authMode === "register" && (
+                {authMode === "reset" && (
+                  <label>
+                    {copy.verificationCode}
+                    <input
+                      name="code"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]{6}"
+                      autoComplete="one-time-code"
+                      maxLength={6}
+                      required
+                    />
+                  </label>
+                )}
+                {authMode !== "forgot" && (
+                  <label>
+                    {authMode === "reset" ? copy.newPassword : copy.password}
+                    <input
+                      name="password"
+                      type="password"
+                      autoComplete={
+                        authMode === "register" || authMode === "reset"
+                          ? "new-password"
+                          : "current-password"
+                      }
+                      minLength={
+                        authMode === "register" || authMode === "reset"
+                          ? 10
+                          : undefined
+                      }
+                      maxLength={128}
+                      required
+                    />
+                  </label>
+                )}
+                {["register", "reset"].includes(authMode) && (
                   <label>
                     {copy.confirmPassword}
                     <input
@@ -1749,22 +1869,69 @@ function App() {
                     ? "…"
                     : authMode === "register"
                       ? copy.createAccount
-                      : copy.continue}
+                      : authMode === "forgot"
+                        ? copy.sendResetCode
+                        : authMode === "reset"
+                          ? copy.resetPassword
+                          : copy.continue}
                   <ArrowRight size={16} />
                 </button>
+                {authMode === "login" && (
+                  <button
+                    type="button"
+                    className="auth-switch auth-switch-inline"
+                    onClick={() => {
+                      setAuthMode("forgot");
+                      setAuthError("");
+                      setAuthNotice("");
+                    }}
+                  >
+                    {copy.forgotPassword}
+                  </button>
+                )}
               </form>
-              <button
-                type="button"
-                className="auth-switch"
-                onClick={() => {
-                  setAuthMode((mode) =>
-                    mode === "register" ? "login" : "register",
-                  );
-                  setAuthError("");
-                }}
-              >
-                {authMode === "register" ? copy.hasAccount : copy.noAccount}
-              </button>
+              {authMode === "register" || authMode === "login" ? (
+                <button
+                  type="button"
+                  className="auth-switch"
+                  onClick={() => {
+                    setAuthMode((mode) =>
+                      mode === "register" ? "login" : "register",
+                    );
+                    setAuthError("");
+                    setAuthNotice("");
+                  }}
+                >
+                  {authMode === "register" ? copy.hasAccount : copy.noAccount}
+                </button>
+              ) : (
+                <div className="auth-reset-links">
+                  {authMode === "reset" && (
+                    <button
+                      type="button"
+                      className="auth-switch"
+                      onClick={() => {
+                        setAuthMode("forgot");
+                        setAuthError("");
+                        setAuthNotice("");
+                      }}
+                    >
+                      {copy.resendCode}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="auth-switch"
+                    onClick={() => {
+                      setAuthMode("login");
+                      setAuthError("");
+                      setAuthNotice("");
+                    }}
+                  >
+                    {copy.backToSignIn}
+                  </button>
+                </div>
+              )}
             </section>
           </div>
         )}

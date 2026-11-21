@@ -2333,6 +2333,14 @@ html[data-theme="light"] textarea:focus-visible {
 html[data-theme="light"] .auth-error {
   color: #b42318;
 }
+.saved-error {
+  margin: 12px 0;
+  color: #fda29b;
+  font-size: 13px;
+}
+html[data-theme="light"] .saved-error {
+  color: #b42318;
+}
 .auth-switch {
   width: 100%;
   margin-top: 16px;
@@ -2342,6 +2350,13 @@ html[data-theme="light"] .auth-error {
   background: transparent;
   font: 600 13px "DM Sans", sans-serif;
   cursor: pointer;
+}
+.auth-switch-inline {
+  margin: 0;
+}
+.auth-reset-links {
+  display: grid;
+  grid-template-columns: 1fr;
 }
 .chat-panel {
   min-width: min(320px, calc(100vw - 16px));

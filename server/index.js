@@ -34,9 +34,9 @@ app.disable("x-powered-by");
 app.use(
   cors({
     origin: allowedOrigins,
+    credentials: true,
     methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
   }),
 );
 app.use((_req, res, next) => {
@@ -132,6 +132,26 @@ userSessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 const UserSession =
   mongoose.models.UserSession ||
   mongoose.model("UserSession", userSessionSchema);
+
+const passwordResetCodeSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      unique: true,
+    },
+    codeHash: { type: String, required: true },
+    codeSalt: { type: String, required: true },
+    attempts: { type: Number, default: 0 },
+    expiresAt: { type: Date, required: true },
+  },
+  { timestamps: true },
+);
+passwordResetCodeSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+const PasswordResetCode =
+  mongoose.models.PasswordResetCode ||
+  mongoose.model("PasswordResetCode", passwordResetCodeSchema);
 
 const savedToolSchema = new mongoose.Schema(
   {
@@ -247,18 +267,26 @@ async function getSignedInUser(req) {
 }
 
 function setUserSessionCookie(req, res, token) {
-  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  const forwardedProtocol = req.get("x-forwarded-proto")?.split(",")[0].trim();
+  const sameSite =
+    process.env.NODE_ENV === "production" || forwardedProtocol === "https"
+      ? "None; Secure"
+      : "Lax";
   res.setHeader(
     "Set-Cookie",
-    `${userSessionCookie}=${token}; Path=/; Max-Age=${Math.floor(userSessionDurationMs / 1000)}; HttpOnly; SameSite=Lax${secure}`,
+    `${userSessionCookie}=${token}; Path=/; Max-Age=${Math.floor(userSessionDurationMs / 1000)}; HttpOnly; SameSite=${sameSite}`,
   );
 }
 
 function clearUserSessionCookie(req, res) {
-  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  const forwardedProtocol = req.get("x-forwarded-proto")?.split(",")[0].trim();
+  const sameSite =
+    process.env.NODE_ENV === "production" || forwardedProtocol === "https"
+      ? "None; Secure"
+      : "Lax";
   res.setHeader(
     "Set-Cookie",
-    `${userSessionCookie}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax${secure}`,
+    `${userSessionCookie}=; Path=/; Max-Age=0; HttpOnly; SameSite=${sameSite}`,
   );
 }
 
@@ -615,6 +643,200 @@ app.post("/api/auth/login", rateLimitUserAuth, async (req, res) => {
     return res.status(500).json({ error: "Could not sign you in." });
   }
 });
+
+const rateLimitPasswordResetRequests = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many reset requests. Please try again later." },
+});
+const rateLimitPasswordResetAttempts = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many reset attempts. Please try again later." },
+});
+
+app.post(
+  "/api/auth/forgot-password",
+  rateLimitPasswordResetRequests,
+  async (req, res) => {
+    if (!databaseConnected())
+      return res.status(503).json({ error: "MongoDB is not connected." });
+
+    const email =
+      typeof req.body?.email === "string"
+        ? req.body.email.trim().toLowerCase()
+        : "";
+    if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: "Enter a valid email address." });
+    }
+
+    const resendApiKey = process.env.RESEND_API_KEY?.trim();
+    const sender = process.env.PASSWORD_RESET_FROM?.trim();
+    if (!resendApiKey || !sender) {
+      return res.status(503).json({
+        error: "Password reset email is not configured.",
+      });
+    }
+
+    try {
+      const user = await User.findOne({ email }).select("_id email").lean();
+      if (user) {
+        await PasswordResetCode.deleteOne({ userId: user._id });
+        const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
+        const codeSalt = crypto.randomBytes(16).toString("hex");
+        const codeHash = Buffer.from(
+          await scryptAsync(code, codeSalt, 32),
+        ).toString("hex");
+        const resetRecord = await PasswordResetCode.create({
+          userId: user._id,
+          codeHash,
+          codeSalt,
+          expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        });
+
+        try {
+          const response = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${resendApiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              from: sender,
+              to: [user.email],
+              subject: "Your AI Library password reset code",
+              text: `Your AI Library verification code is ${code}. It expires in 10 minutes. If you did not request this, you can ignore this email.`,
+              html: `<p>Your AI Library verification code is:</p><p style="font-size:28px;font-weight:700;letter-spacing:6px">${code}</p><p>It expires in 10 minutes. If you did not request this, you can ignore this email.</p>`,
+            }),
+          });
+          if (!response.ok) {
+            console.error(
+              "Password reset email provider returned status:",
+              response.status,
+            );
+            await PasswordResetCode.deleteOne({ _id: resetRecord._id });
+          }
+        } catch (error) {
+          console.error("Could not send password reset email:", error.message);
+          await PasswordResetCode.deleteOne({ _id: resetRecord._id });
+        }
+      }
+      return res.status(202).json({
+        ok: true,
+        message:
+          "If an account exists for that email, a verification code has been sent.",
+      });
+    } catch (error) {
+      console.error("Could not request a password reset:", error.message);
+      return res.status(500).json({ error: "Could not request a reset code." });
+    }
+  },
+);
+
+app.post(
+  "/api/auth/reset-password",
+  rateLimitPasswordResetAttempts,
+  async (req, res) => {
+    if (!databaseConnected())
+      return res.status(503).json({ error: "MongoDB is not connected." });
+
+    const email =
+      typeof req.body?.email === "string"
+        ? req.body.email.trim().toLowerCase()
+        : "";
+    const code = typeof req.body?.code === "string" ? req.body.code.trim() : "";
+    const password =
+      typeof req.body?.password === "string" ? req.body.password : "";
+    if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: "Enter a valid email address." });
+    }
+    if (!/^\d{6}$/.test(code)) {
+      return res.status(400).json({
+        error: "The verification code is invalid or expired.",
+      });
+    }
+    if (password.length < 10 || password.length > 128) {
+      return res.status(400).json({
+        error: "Password must be between 10 and 128 characters.",
+      });
+    }
+
+    try {
+      const user = await User.findOne({ email }).select("_id email").lean();
+      const resetRecord = user
+        ? await PasswordResetCode.findOne({
+            userId: user._id,
+            expiresAt: { $gt: new Date() },
+          })
+        : null;
+      if (!user || !resetRecord || resetRecord.attempts >= 5) {
+        if (resetRecord) {
+          await PasswordResetCode.deleteOne({ _id: resetRecord._id });
+        }
+        return res.status(400).json({
+          error: "The verification code is invalid or expired.",
+        });
+      }
+
+      const actualHash = Buffer.from(
+        await scryptAsync(code, resetRecord.codeSalt, 32),
+      );
+      const expectedHash = Buffer.from(resetRecord.codeHash, "hex");
+      if (
+        actualHash.length !== expectedHash.length ||
+        !crypto.timingSafeEqual(actualHash, expectedHash)
+      ) {
+        const attempts = resetRecord.attempts + 1;
+        if (attempts >= 5) {
+          await PasswordResetCode.deleteOne({ _id: resetRecord._id });
+        } else {
+          await PasswordResetCode.updateOne(
+            { _id: resetRecord._id },
+            { $set: { attempts } },
+          );
+        }
+        return res.status(400).json({
+          error: "The verification code is invalid or expired.",
+        });
+      }
+
+      const consumed = await PasswordResetCode.deleteOne({
+        _id: resetRecord._id,
+        codeHash: resetRecord.codeHash,
+        expiresAt: { $gt: new Date() },
+      });
+      if (consumed.deletedCount !== 1) {
+        return res.status(400).json({
+          error: "The verification code is invalid or expired.",
+        });
+      }
+
+      const passwordSalt = crypto.randomBytes(16).toString("hex");
+      const passwordHash = Buffer.from(
+        await scryptAsync(password, passwordSalt, 64),
+      ).toString("hex");
+      await User.updateOne(
+        { _id: user._id },
+        { $set: { passwordHash, passwordSalt } },
+      );
+      await Promise.all([
+        PasswordResetCode.deleteMany({ userId: user._id }),
+        UserSession.deleteMany({ userId: user._id }),
+      ]);
+      await issueUserSession(req, res, user._id);
+      return res.json({
+        user: { id: String(user._id), email: user.email },
+      });
+    } catch (error) {
+      console.error("Could not reset user password:", error.message);
+      return res.status(500).json({ error: "Could not reset your password." });
+    }
+  },
+);
 
 app.get("/api/auth/session", async (req, res) => {
   if (!databaseConnected()) return res.json({ user: null });
