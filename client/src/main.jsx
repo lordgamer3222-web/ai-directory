@@ -35,7 +35,8 @@ import {
 } from "lucide-react";
 import "./styles.css";
 const API_BASE_URL = (
-  import.meta.env.VITE_API_BASE_URL || "https://ai-directory-mhje.onrender.com"
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.DEV ? "" : "https://ai-directory-mhje.onrender.com")
 ).replace(/\/+$/, "");
 
 function apiFetch(path, options = {}) {
