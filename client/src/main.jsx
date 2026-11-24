@@ -11,6 +11,7 @@ import { languageOptions, translations } from "./i18n";
 import toolsData from "./data/tools";
 import ToolLogo from "./components/ToolLogo";
 import AdminApp from "./admin/AdminApp";
+import LegalPage from "./pages/LegalPage";
 import {
   ArrowRight,
   Bookmark,
@@ -300,6 +301,79 @@ function FormattedAssistantText({ text }) {
   flushList();
   flushParagraph();
   return <div className="formatted-message">{blocks}</div>;
+}
+
+function useTypewriterPlaceholder(examples, enabled = true) {
+  const [text, setText] = useState("");
+
+  useEffect(() => {
+    const phrases = Array.isArray(examples)
+      ? examples.filter(
+          (example) => typeof example === "string" && example.trim(),
+        )
+      : [];
+    if (!enabled || phrases.length === 0) {
+      setText("");
+      return undefined;
+    }
+
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      setText(phrases[0]);
+      return undefined;
+    }
+
+    let phraseIndex = 0;
+    let characterIndex = 0;
+    let deleting = false;
+    let timerId;
+
+    const typeNextCharacter = () => {
+      const phrase = phrases[phraseIndex];
+      if (!deleting) {
+        characterIndex = Math.min(characterIndex + 1, phrase.length);
+        setText(phrase.slice(0, characterIndex));
+        if (characterIndex === phrase.length) {
+          deleting = true;
+          timerId = window.setTimeout(typeNextCharacter, 1400);
+        } else {
+          timerId = window.setTimeout(typeNextCharacter, 62);
+        }
+        return;
+      }
+
+      characterIndex = Math.max(0, characterIndex - 1);
+      setText(phrase.slice(0, characterIndex));
+      if (characterIndex === 0) {
+        deleting = false;
+        phraseIndex = (phraseIndex + 1) % phrases.length;
+        timerId = window.setTimeout(typeNextCharacter, 280);
+      } else {
+        timerId = window.setTimeout(typeNextCharacter, 30);
+      }
+    };
+
+    setText("");
+    timerId = window.setTimeout(typeNextCharacter, 650);
+    return () => window.clearTimeout(timerId);
+  }, [examples, enabled]);
+
+  return text;
+}
+
+function TypewriterPlaceholderInput({
+  examples,
+  animate,
+  fallbackPlaceholder,
+  ...inputProps
+}) {
+  const animatedPlaceholder = useTypewriterPlaceholder(examples, animate);
+
+  return (
+    <input
+      {...inputProps}
+      placeholder={animate ? animatedPlaceholder : fallbackPlaceholder}
+    />
+  );
 }
 
 function App() {
@@ -1294,10 +1368,12 @@ function App() {
           <section className="explore-section" id="explore">
             <div className="search-wrap">
               <Search className="search-icon" size={21} />
-              <input
+              <TypewriterPlaceholderInput
+                examples={copy.promptExamples}
+                animate={!query}
+                fallbackPlaceholder={copy.searchPlaceholder}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder={copy.searchPlaceholder}
                 aria-label={copy.searchAria}
               />
               <button
@@ -1698,10 +1774,12 @@ function App() {
               </button>
             </div>
             <form className="chat-input" onSubmit={askAI}>
-              <input
+              <TypewriterPlaceholderInput
+                examples={copy.promptExamples}
+                animate={assistantOpen && !prompt}
+                fallbackPlaceholder={copy.chatPlaceholder}
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder={copy.chatPlaceholder}
                 aria-label={copy.chatInputAria}
                 maxLength={3000}
               />
@@ -1741,7 +1819,6 @@ function App() {
                 {voiceStatus}
               </p>
             )}
-            <p className="chat-disclaimer">{copy.chatDisclaimer}</p>
             {!assistantFullPage && (
               <button
                 type="button"
@@ -2047,8 +2124,24 @@ function App() {
 }
 
 const root = document.getElementById("root");
-const isAdminRoute = window.location.pathname.replace(/\/$/, "") === "/admin";
+const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
+const isAdminRoute = currentPath === "/admin";
+const legalPageByPath = {
+  "/about": "about",
+  "/privacy-policy": "privacy",
+  "/contact": "contact",
+  "/terms-and-conditions": "terms",
+};
+const legalPage = legalPageByPath[currentPath];
 
 createRoot(root).render(
-  <React.StrictMode>{isAdminRoute ? <AdminApp /> : <App />}</React.StrictMode>,
+  <React.StrictMode>
+    {isAdminRoute ? (
+      <AdminApp />
+    ) : legalPage ? (
+      <LegalPage page={legalPage} />
+    ) : (
+      <App />
+    )}
+  </React.StrictMode>,
 );
