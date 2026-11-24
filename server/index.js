@@ -5,6 +5,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import express from "express";
+import helmet from "helmet";
 import cors from "cors";
 import mongoose from "mongoose";
 
@@ -31,6 +32,12 @@ const allowedOrigins = (process.env.CLIENT_ORIGIN || "http://localhost:5173")
   .filter(Boolean);
 
 app.disable("x-powered-by");
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  }),
+);
 app.use(
   cors({
     origin: allowedOrigins,
@@ -790,14 +797,19 @@ app.post(
         actualHash.length !== expectedHash.length ||
         !crypto.timingSafeEqual(actualHash, expectedHash)
       ) {
-        const attempts = resetRecord.attempts + 1;
-        if (attempts >= 5) {
+        const updatedRecord = await PasswordResetCode.findOneAndUpdate(
+          {
+            _id: resetRecord._id,
+            attempts: { $lt: 5 },
+            expiresAt: { $gt: new Date() },
+          },
+          { $inc: { attempts: 1 } },
+          { new: true },
+        )
+          .select("attempts")
+          .lean();
+        if (!updatedRecord || updatedRecord.attempts >= 5) {
           await PasswordResetCode.deleteOne({ _id: resetRecord._id });
-        } else {
-          await PasswordResetCode.updateOne(
-            { _id: resetRecord._id },
-            { $set: { attempts } },
-          );
         }
         return res.status(400).json({
           error: "The verification code is invalid or expired.",
@@ -807,6 +819,7 @@ app.post(
       const consumed = await PasswordResetCode.deleteOne({
         _id: resetRecord._id,
         codeHash: resetRecord.codeHash,
+        attempts: { $lt: 5 },
         expiresAt: { $gt: new Date() },
       });
       if (consumed.deletedCount !== 1) {
@@ -852,12 +865,21 @@ app.get("/api/auth/session", async (req, res) => {
 });
 
 app.post("/api/auth/logout", async (req, res) => {
-  if (databaseConnected()) {
-    const token = readSessionToken(req);
-    if (token) {
-      const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-      await UserSession.deleteOne({ tokenHash });
+  try {
+    if (databaseConnected()) {
+      const token = readSessionToken(req);
+      if (token) {
+        const tokenHash = crypto
+          .createHash("sha256")
+          .update(token)
+          .digest("hex");
+        await UserSession.deleteOne({ tokenHash });
+      }
     }
+  } catch (error) {
+    console.error("Could not invalidate user session:", error.message);
+    clearUserSessionCookie(req, res);
+    return res.status(500).json({ error: "Could not sign you out." });
   }
   clearUserSessionCookie(req, res);
   return res.json({ ok: true });
@@ -1163,14 +1185,14 @@ app.post("/api/admin/tools", requireAdmin, async (req, res) => {
   const validation = validateToolPayload(req.body);
   if (validation.error)
     return res.status(400).json({ error: validation.error });
-  if (await Tool.exists({ id: validation.value.id })) {
-    return res
-      .status(409)
-      .json({ error: "A tool with this ID already exists." });
-  }
-
   let uploadedIcon = null;
   try {
+    if (await Tool.exists({ id: validation.value.id })) {
+      return res
+        .status(409)
+        .json({ error: "A tool with this ID already exists." });
+    }
+
     uploadedIcon = await saveUploadedIcon(req.body.iconUpload);
     const tool = await Tool.create({
       ...validation.value,
@@ -1199,19 +1221,19 @@ app.patch("/api/admin/tools/:id", requireAdmin, async (req, res) => {
   if (validation.error)
     return res.status(400).json({ error: validation.error });
 
-  const previous = await Tool.findOne({ id: req.params.id });
-  if (!previous) return res.status(404).json({ error: "AI tool not found." });
-  if (
-    validation.value.id !== req.params.id &&
-    (await Tool.exists({ id: validation.value.id }))
-  ) {
-    return res
-      .status(409)
-      .json({ error: "A tool with this ID already exists." });
-  }
-
   let uploadedIcon = null;
   try {
+    const previous = await Tool.findOne({ id: req.params.id });
+    if (!previous) return res.status(404).json({ error: "AI tool not found." });
+    if (
+      validation.value.id !== req.params.id &&
+      (await Tool.exists({ id: validation.value.id }))
+    ) {
+      return res
+        .status(409)
+        .json({ error: "A tool with this ID already exists." });
+    }
+
     uploadedIcon = await saveUploadedIcon(req.body.iconUpload);
     const nextIcon = uploadedIcon || validation.value.icon;
     const updated = await Tool.findOneAndUpdate(
