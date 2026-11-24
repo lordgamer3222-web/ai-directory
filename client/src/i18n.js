@@ -10,7 +10,8 @@ export const translations = {
     aboutNav: "About",
     talkToAiNav: "Talk to AI",
     aboutTitle: "About AI Library",
-    aboutCopy: "AI Library is a curated directory for discovering AI tools for writing, research, design, coding, and everyday work. Browse by category, compare pricing, and use Ask Me to find a tool that fits your needs.",
+    aboutCopy:
+      "AI Library is a curated directory for discovering AI tools for writing, research, design, coding, and everyday work. Browse by category, compare pricing, and use Ask Me to find a tool that fits your needs.",
     pagination: "Tool pages",
     previousPage: "Previous",
     nextPage: "Next",
@@ -21,7 +22,8 @@ export const translations = {
     stopVoiceInput: "Stop voice input",
     listening: "Listening…",
     voiceUnavailable: "Voice input is unavailable in this browser.",
-    voicePermissionDenied: "Microphone access was denied. Allow access and try again.",
+    voicePermissionDenied:
+      "Microphone access was denied. Allow access and try again.",
     language: "Language",
     theme: "Theme",
     system: "System",
@@ -41,11 +43,14 @@ export const translations = {
     signIn: "Sign in",
     signOut: "Sign out",
     askAI: "Ask AI",
-    heroEyebrow: "YOUR NEXT GREAT IDEA STARTS HERE",
-    heroLineOne: "Hello, welcome to the",
-    heroLineTwo: "Library of",
-    heroEmphasis: "AI Tools",
-    heroSubtitle: "Discover the right AI for every idea.",
+
+    heroEyebrow: "AI TOOLS DIRECTORY • AI-POWERED SEARCH",
+    heroLineOne: "Discover the Best",
+    heroLineTwo: "AI Tools for",
+    heroEmphasis: "Every Need",
+    heroSubtitle:
+      "Explore AI tools for writing, coding, image generation, video editing, marketing and productivity. Not sure which tool to choose? Simply describe what you need and let our AI-powered search help you discover the right tools.",
+
     exploreTools: "Explore tools",
     searchPlaceholder: "Search AI tools or describe what you need…",
     searchAria: "Search AI tools",
@@ -85,10 +90,13 @@ export const translations = {
     chatPlaceholder: "Ask anything about AI tools…",
     chatInputAria: "Ask the AI assistant",
     sendMessage: "Send message",
-    chatDisclaimer: "Groq primary · Gemini fallback · Responses may need verification",
-    welcome: "Hey there! ✨ Tell me what you want to do, and I’ll help you find the right AI tool.",
+    chatDisclaimer:
+      "Groq primary · Gemini fallback · Responses may need verification",
+    welcome:
+      "Hey there! ✨ Tell me what you want to do, and I’ll help you find the right AI tool.",
     fallbackAnswer: "Here are a few tools from the directory.",
-    assistantError: "I can’t reach the AI service right now. Please try again in a moment.",
+    assistantError:
+      "I can’t reach the AI service right now. Please try again in a moment.",
     thanks: "Thanks for contributing!",
     submittedReview: "Your tool was submitted for review.",
     done: "Done",
@@ -104,7 +112,8 @@ export const translations = {
     websitePlaceholder: "https://…",
     descriptionPlaceholder: "What can this tool help people do?",
     sendForReview: "Send for review",
-    reviewNotice: "Submissions are reviewed by an administrator before they appear in the directory.",
+    reviewNotice:
+      "Submissions are reviewed by an administrator before they appear in the directory.",
     close: "Close",
     footerRights: "© 2026–27 All rights reserved",
     createdBy: "Created by Amar Kushwaha",
@@ -114,18 +123,23 @@ export const translations = {
     authIntro: "Your saved tools will be available whenever you sign in.",
     forgotPassword: "Forgot password?",
     forgotPasswordTitle: "Reset your password",
-    forgotPasswordIntro: "Enter your account email and we’ll send a verification code if an account exists.",
+    forgotPasswordIntro:
+      "Enter your account email and we’ll send a verification code if an account exists.",
     resetPasswordTitle: "Verify your email",
-    resetPasswordIntro: "Enter the six-digit code from your email and choose a new password.",
-    resetCodeSent: "If an account exists for this email, a six-digit code has been sent. Check your inbox and spam folder.",
+    resetPasswordIntro:
+      "Enter the six-digit code from your email and choose a new password.",
+    resetCodeSent:
+      "If an account exists for this email, a six-digit code has been sent. Check your inbox and spam folder.",
     verificationCode: "Six-digit verification code",
     newPassword: "New password",
     sendResetCode: "Send verification code",
     resetPassword: "Reset password",
     resendCode: "Send a new code",
     backToSignIn: "Back to sign in",
-    resetCodeInvalid: "That code is invalid or expired. Request a new code and try again.",
-    resetEmailUnavailable: "Password reset email is not configured yet. Please contact the website administrator.",
+    resetCodeInvalid:
+      "That code is invalid or expired. Request a new code and try again.",
+    resetEmailUnavailable:
+      "Password reset email is not configured yet. Please contact the website administrator.",
     sessionExpired: "Your sign-in expired. Please sign in again to save tools.",
     saveError: "Could not save this tool. Please try again.",
     email: "Email address",
@@ -139,9 +153,11 @@ export const translations = {
     passwordMismatch: "The passwords do not match.",
     authGenericError: "We could not sign you in. Please try again.",
     authInvalid: "Email or password is incorrect.",
-    authDatabase: "Accounts are unavailable because the database is not connected.",
+    authDatabase:
+      "Accounts are unavailable because the database is not connected.",
     authRateLimit: "Too many attempts. Please try again later.",
-    saveRequiresLogin: "Sign in or create an account to save tools across devices.",
+    saveRequiresLogin:
+      "Sign in or create an account to save tools across devices.",
     emailInUse: "An account with this email already exists.",
   },
   hi: {
@@ -149,7 +165,8 @@ export const translations = {
     aboutNav: "परिचय",
     talkToAiNav: "AI से बात करें",
     aboutTitle: "AI Library के बारे में",
-    aboutCopy: "AI Library AI टूल खोजने के लिए एक व्यवस्थित निर्देशिका है। लेखन, शोध, डिज़ाइन, कोडिंग और रोज़मर्रा के कामों के लिए टूल देखें। श्रेणी से ब्राउज़ करें, कीमतों की तुलना करें, और अपनी ज़रूरत के अनुसार टूल खोजने के लिए Ask Me का उपयोग करें।",
+    aboutCopy:
+      "AI Library AI टूल खोजने के लिए एक व्यवस्थित निर्देशिका है। लेखन, शोध, डिज़ाइन, कोडिंग और रोज़मर्रा के कामों के लिए टूल देखें। श्रेणी से ब्राउज़ करें, कीमतों की तुलना करें, और अपनी ज़रूरत के अनुसार टूल खोजने के लिए Ask Me का उपयोग करें।",
     pagination: "टूल पेज",
     previousPage: "पिछला",
     nextPage: "अगला",
@@ -160,7 +177,8 @@ export const translations = {
     stopVoiceInput: "आवाज़ सुनना रोकें",
     listening: "सुन रहा है…",
     voiceUnavailable: "इस ब्राउज़र में आवाज़ से लिखना उपलब्ध नहीं है।",
-    voicePermissionDenied: "माइक्रोफ़ोन की अनुमति नहीं मिली। अनुमति देकर फिर कोशिश करें।",
+    voicePermissionDenied:
+      "माइक्रोफ़ोन की अनुमति नहीं मिली। अनुमति देकर फिर कोशिश करें।",
     language: "भाषा",
     theme: "थीम",
     system: "सिस्टम",
@@ -180,11 +198,14 @@ export const translations = {
     signIn: "साइन इन",
     signOut: "साइन आउट",
     askAI: "AI से पूछें",
-    heroEyebrow: "आपका अगला शानदार विचार यहीं से शुरू होता है",
-    heroLineOne: "नमस्ते, स्वागत है",
-    heroLineTwo: "AI टूल्स की",
-    heroEmphasis: "लाइब्रेरी में",
-    heroSubtitle: "हर विचार के लिए सही AI खोजें।",
+
+    heroEyebrow: "AI टूल्स डायरेक्टरी • AI-पावर्ड सर्च",
+    heroLineOne: "हर जरूरत के लिए",
+    heroLineTwo: "बेहतरीन",
+    heroEmphasis: "AI टूल्स खोजें",
+    heroSubtitle:
+      "लेखन, कोडिंग, इमेज जनरेशन, वीडियो एडिटिंग, मार्केटिंग और प्रोडक्टिविटी के लिए AI टूल्स खोजें। सही टूल नहीं मिल रहा? अपनी जरूरत बताएं और हमारा AI-पावर्ड सर्च आपके लिए उपयुक्त टूल खोजने में मदद करेगा।",
+
     exploreTools: "टूल खोजें",
     searchPlaceholder: "AI टूल खोजें या बताएं कि आपको क्या चाहिए…",
     searchAria: "AI टूल खोजें",
@@ -225,9 +246,11 @@ export const translations = {
     chatInputAria: "AI सहायक से पूछें",
     sendMessage: "संदेश भेजें",
     chatDisclaimer: "Groq मुख्य · Gemini वैकल्पिक · जवाबों की पुष्टि करें",
-    welcome: "नमस्ते! ✨ बताइए आप क्या करना चाहते हैं, मैं सही AI टूल खोजने में मदद करूँगा।",
+    welcome:
+      "नमस्ते! ✨ बताइए आप क्या करना चाहते हैं, मैं सही AI टूल खोजने में मदद करूँगा।",
     fallbackAnswer: "डायरेक्टरी से कुछ टूल यहाँ हैं।",
-    assistantError: "अभी AI सेवा से संपर्क नहीं हो पाया। कृपया थोड़ी देर बाद फिर कोशिश करें।",
+    assistantError:
+      "अभी AI सेवा से संपर्क नहीं हो पाया। कृपया थोड़ी देर बाद फिर कोशिश करें।",
     thanks: "योगदान के लिए धन्यवाद!",
     submittedReview: "आपका टूल समीक्षा के लिए भेज दिया गया है।",
     done: "हो गया",
@@ -243,7 +266,8 @@ export const translations = {
     websitePlaceholder: "https://…",
     descriptionPlaceholder: "यह टूल लोगों की किस काम में मदद करता है?",
     sendForReview: "समीक्षा के लिए भेजें",
-    reviewNotice: "डायरेक्टरी में दिखने से पहले व्यवस्थापक सभी सुझावों की समीक्षा करते हैं।",
+    reviewNotice:
+      "डायरेक्टरी में दिखने से पहले व्यवस्थापक सभी सुझावों की समीक्षा करते हैं।",
     close: "बंद करें",
     footerRights: "© 2026–27 सर्वाधिकार सुरक्षित",
     createdBy: "निर्माता: अमर कुशवाहा",
@@ -253,19 +277,25 @@ export const translations = {
     authIntro: "साइन इन करने पर आपके सेव किए गए टूल उपलब्ध रहेंगे।",
     forgotPassword: "पासवर्ड भूल गए?",
     forgotPasswordTitle: "पासवर्ड रीसेट करें",
-    forgotPasswordIntro: "अपने खाते का ईमेल डालें। खाता मिलने पर हम सत्यापन कोड भेजेंगे।",
+    forgotPasswordIntro:
+      "अपने खाते का ईमेल डालें। खाता मिलने पर हम सत्यापन कोड भेजेंगे।",
     resetPasswordTitle: "ईमेल सत्यापित करें",
-    resetPasswordIntro: "ईमेल में मिला छह अंकों का कोड डालें और नया पासवर्ड चुनें।",
-    resetCodeSent: "अगर इस ईमेल से खाता मौजूद है, तो छह अंकों का कोड भेजा गया है। इनबॉक्स और स्पैम फ़ोल्डर देखें।",
+    resetPasswordIntro:
+      "ईमेल में मिला छह अंकों का कोड डालें और नया पासवर्ड चुनें।",
+    resetCodeSent:
+      "अगर इस ईमेल से खाता मौजूद है, तो छह अंकों का कोड भेजा गया है। इनबॉक्स और स्पैम फ़ोल्डर देखें।",
     verificationCode: "छह अंकों का सत्यापन कोड",
     newPassword: "नया पासवर्ड",
     sendResetCode: "सत्यापन कोड भेजें",
     resetPassword: "पासवर्ड रीसेट करें",
     resendCode: "नया कोड भेजें",
     backToSignIn: "साइन इन पर वापस जाएँ",
-    resetCodeInvalid: "यह कोड गलत है या इसकी समय सीमा समाप्त हो गई है। नया कोड माँगें।",
-    resetEmailUnavailable: "पासवर्ड रीसेट ईमेल अभी सेट नहीं है। वेबसाइट व्यवस्थापक से संपर्क करें।",
-    sessionExpired: "आपका साइन-इन समाप्त हो गया। टूल सेव करने के लिए फिर साइन इन करें।",
+    resetCodeInvalid:
+      "यह कोड गलत है या इसकी समय सीमा समाप्त हो गई है। नया कोड माँगें।",
+    resetEmailUnavailable:
+      "पासवर्ड रीसेट ईमेल अभी सेट नहीं है। वेबसाइट व्यवस्थापक से संपर्क करें।",
+    sessionExpired:
+      "आपका साइन-इन समाप्त हो गया। टूल सेव करने के लिए फिर साइन इन करें।",
     saveError: "टूल सेव नहीं हो पाया। कृपया फिर कोशिश करें।",
     email: "ईमेल पता",
     password: "पासवर्ड",
@@ -280,7 +310,8 @@ export const translations = {
     authInvalid: "ईमेल या पासवर्ड गलत है।",
     authDatabase: "डेटाबेस कनेक्ट नहीं है, इसलिए खाते अभी उपलब्ध नहीं हैं।",
     authRateLimit: "बहुत अधिक प्रयास हुए। कृपया बाद में फिर कोशिश करें।",
-    saveRequiresLogin: "अलग-अलग डिवाइस पर टूल सेव रखने के लिए साइन इन करें या खाता बनाएँ।",
+    saveRequiresLogin:
+      "अलग-अलग डिवाइस पर टूल सेव रखने के लिए साइन इन करें या खाता बनाएँ।",
     emailInUse: "इस ईमेल से पहले ही खाता बना हुआ है।",
   },
   fr: {
@@ -288,7 +319,8 @@ export const translations = {
     aboutNav: "À propos",
     talkToAiNav: "Parler à l’IA",
     aboutTitle: "À propos d’AI Library",
-    aboutCopy: "AI Library est un répertoire sélectionné pour découvrir des outils d’IA dédiés à l’écriture, à la recherche, au design, au code et aux tâches du quotidien. Parcourez les catégories, comparez les tarifs et utilisez Ask Me pour trouver l’outil adapté à vos besoins.",
+    aboutCopy:
+      "AI Library est un répertoire sélectionné pour découvrir des outils d’IA dédiés à l’écriture, à la recherche, au design, au code et aux tâches du quotidien. Parcourez les catégories, comparez les tarifs et utilisez Ask Me pour trouver l’outil adapté à vos besoins.",
     pagination: "Pages d’outils",
     previousPage: "Précédent",
     nextPage: "Suivant",
@@ -298,8 +330,10 @@ export const translations = {
     voiceInput: "Utiliser la saisie vocale",
     stopVoiceInput: "Arrêter la saisie vocale",
     listening: "Écoute en cours…",
-    voiceUnavailable: "La saisie vocale n’est pas disponible dans ce navigateur.",
-    voicePermissionDenied: "L’accès au micro a été refusé. Autorisez-le puis réessayez.",
+    voiceUnavailable:
+      "La saisie vocale n’est pas disponible dans ce navigateur.",
+    voicePermissionDenied:
+      "L’accès au micro a été refusé. Autorisez-le puis réessayez.",
     language: "Langue",
     theme: "Thème",
     system: "Système",
@@ -319,11 +353,14 @@ export const translations = {
     signIn: "Connexion",
     signOut: "Déconnexion",
     askAI: "Demander à l’IA",
-    heroEyebrow: "VOTRE PROCHAINE GRANDE IDÉE COMMENCE ICI",
-    heroLineOne: "Bonjour, bienvenue dans la",
-    heroLineTwo: "bibliothèque d’outils",
-    heroEmphasis: "d’IA",
-    heroSubtitle: "Trouvez l’IA adaptée à chaque idée.",
+
+    heroEyebrow: "ANNUAIRE D'OUTILS IA • RECHERCHE INTELLIGENTE",
+    heroLineOne: "Découvrez les meilleurs",
+    heroLineTwo: "outils d'IA pour",
+    heroEmphasis: "chaque besoin",
+    heroSubtitle:
+      "Explorez des outils d'IA pour l'écriture, le code, la création d'images, la vidéo, le marketing et la productivité. Décrivez votre besoin et laissez notre recherche IA vous aider à trouver les outils adaptés.",
+
     exploreTools: "Explorer les outils",
     searchPlaceholder: "Recherchez un outil d’IA ou décrivez votre besoin…",
     searchAria: "Rechercher des outils d’IA",
@@ -343,7 +380,8 @@ export const translations = {
     websiteUnavailable: "Site web indisponible",
     loadingTools: "Chargement des outils d’IA…",
     translatingDescriptions: "Traduction des descriptions…",
-    translationUnavailable: "Certaines descriptions restent en anglais pour le moment.",
+    translationUnavailable:
+      "Certaines descriptions restent en anglais pour le moment.",
     noTools: "Aucun outil trouvé",
     tryAnother: "Essayez un autre mot-clé ou effacez un filtre.",
     clearFilters: "Effacer les filtres",
@@ -358,21 +396,26 @@ export const translations = {
     officialWebsite: "Site officiel",
     aiStudents: "IA pour les étudiants",
     codingTools: "Outils de programmation",
-    studentPrompt: "Suggère les meilleurs outils d’IA gratuits pour les étudiants",
+    studentPrompt:
+      "Suggère les meilleurs outils d’IA gratuits pour les étudiants",
     codingPrompt: "Trouve des outils d’IA pour programmer",
     chatPlaceholder: "Posez vos questions sur les outils d’IA…",
     chatInputAria: "Demander à l’assistant IA",
     sendMessage: "Envoyer le message",
-    chatDisclaimer: "Groq principal · Gemini en secours · Vérifiez les réponses",
-    welcome: "Bonjour ! ✨ Dites-moi ce que vous voulez faire et je vous aiderai à trouver l’outil d’IA adapté.",
+    chatDisclaimer:
+      "Groq principal · Gemini en secours · Vérifiez les réponses",
+    welcome:
+      "Bonjour ! ✨ Dites-moi ce que vous voulez faire et je vous aiderai à trouver l’outil d’IA adapté.",
     fallbackAnswer: "Voici quelques outils du répertoire.",
-    assistantError: "Le service d’IA est inaccessible pour le moment. Réessayez dans un instant.",
+    assistantError:
+      "Le service d’IA est inaccessible pour le moment. Réessayez dans un instant.",
     thanks: "Merci pour votre contribution !",
     submittedReview: "Votre outil a été envoyé pour examen.",
     done: "Terminé",
     communitySubmission: "PROPOSITION DE LA COMMUNAUTÉ",
     submitTitle: "Proposer un outil d’IA",
-    submitCopy: "Vous avez trouvé quelque chose d’utile ? Partagez-le avec la communauté.",
+    submitCopy:
+      "Vous avez trouvé quelque chose d’utile ? Partagez-le avec la communauté.",
     toolName: "Nom de l’outil",
     categoryLabel: "Catégorie",
     websiteUrl: "Adresse du site web",
@@ -382,7 +425,8 @@ export const translations = {
     websitePlaceholder: "https://…",
     descriptionPlaceholder: "À quoi cet outil peut-il aider ?",
     sendForReview: "Envoyer pour examen",
-    reviewNotice: "Les propositions sont examinées avant leur ajout au répertoire.",
+    reviewNotice:
+      "Les propositions sont examinées avant leur ajout au répertoire.",
     close: "Fermer",
     footerRights: "© 2026–27 Tous droits réservés",
     createdBy: "Créé par Amar Kushwaha",
@@ -392,19 +436,25 @@ export const translations = {
     authIntro: "Retrouvez vos outils enregistrés à chaque connexion.",
     forgotPassword: "Mot de passe oublié ?",
     forgotPasswordTitle: "Réinitialiser le mot de passe",
-    forgotPasswordIntro: "Saisissez l’adresse e-mail de votre compte. Si un compte existe, nous enverrons un code.",
+    forgotPasswordIntro:
+      "Saisissez l’adresse e-mail de votre compte. Si un compte existe, nous enverrons un code.",
     resetPasswordTitle: "Vérifier votre e-mail",
-    resetPasswordIntro: "Saisissez le code à six chiffres reçu par e-mail et choisissez un nouveau mot de passe.",
-    resetCodeSent: "Si un compte existe pour cette adresse, un code à six chiffres a été envoyé. Vérifiez votre boîte de réception et vos courriers indésirables.",
+    resetPasswordIntro:
+      "Saisissez le code à six chiffres reçu par e-mail et choisissez un nouveau mot de passe.",
+    resetCodeSent:
+      "Si un compte existe pour cette adresse, un code à six chiffres a été envoyé. Vérifiez votre boîte de réception et vos courriers indésirables.",
     verificationCode: "Code de vérification à six chiffres",
     newPassword: "Nouveau mot de passe",
     sendResetCode: "Envoyer le code de vérification",
     resetPassword: "Réinitialiser le mot de passe",
     resendCode: "Envoyer un nouveau code",
     backToSignIn: "Retour à la connexion",
-    resetCodeInvalid: "Ce code est invalide ou expiré. Demandez un nouveau code.",
-    resetEmailUnavailable: "L’envoi des e-mails de réinitialisation n’est pas configuré. Contactez l’administrateur du site.",
-    sessionExpired: "Votre session a expiré. Reconnectez-vous pour enregistrer des outils.",
+    resetCodeInvalid:
+      "Ce code est invalide ou expiré. Demandez un nouveau code.",
+    resetEmailUnavailable:
+      "L’envoi des e-mails de réinitialisation n’est pas configuré. Contactez l’administrateur du site.",
+    sessionExpired:
+      "Votre session a expiré. Reconnectez-vous pour enregistrer des outils.",
     saveError: "Impossible d’enregistrer cet outil. Veuillez réessayer.",
     email: "Adresse e-mail",
     password: "Mot de passe",
@@ -417,9 +467,11 @@ export const translations = {
     passwordMismatch: "Les mots de passe ne correspondent pas.",
     authGenericError: "Connexion impossible. Veuillez réessayer.",
     authInvalid: "L’adresse e-mail ou le mot de passe est incorrect.",
-    authDatabase: "Les comptes sont indisponibles, car la base de données n’est pas connectée.",
+    authDatabase:
+      "Les comptes sont indisponibles, car la base de données n’est pas connectée.",
     authRateLimit: "Trop de tentatives. Veuillez réessayer plus tard.",
-    saveRequiresLogin: "Connectez-vous ou créez un compte pour retrouver vos outils sur plusieurs appareils.",
+    saveRequiresLogin:
+      "Connectez-vous ou créez un compte pour retrouver vos outils sur plusieurs appareils.",
     emailInUse: "Un compte existe déjà avec cette adresse e-mail.",
   },
 };
