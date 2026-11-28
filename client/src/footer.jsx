@@ -13,6 +13,7 @@ const Footer = ({ language = "en" }) => {
       </p>
       <nav className="footer-links" aria-label="Site information">
         <a href="/ai-search">{copy.talkToAiNav || "Talk to AI"}</a>
+        <a href="/compare">{copy.compareTools || "Compare tools"}</a>
         <a href="/about">{copy.aboutUs}</a>
         <a href="/contact">{copy.contactUs}</a>
         <a href="/privacy-policy">{copy.privacyPolicy}</a>

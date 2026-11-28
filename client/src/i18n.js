@@ -12,6 +12,7 @@ export const translations = {
     toolsNav: "Tools",
     aboutNav: "About",
     talkToAiNav: "Talk to AI",
+    compareTools: "Compare tools",
     aboutTitle: "About AI Directory",
     aboutCopy:
       "AI Directory is a curated directory for discovering AI tools for writing, research, design, coding, and everyday work. Browse by category, compare pricing, and use Ask AI to find a tool that fits your needs.",
@@ -180,6 +181,7 @@ export const translations = {
     toolsNav: "टूल",
     aboutNav: "परिचय",
     talkToAiNav: "AI से बात करें",
+    compareTools: "टूल की तुलना करें",
     aboutTitle: "AI Directory के बारे में",
     aboutCopy:
       "AI Directory AI टूल खोजने के लिए एक व्यवस्थित निर्देशिका है। लेखन, शोध, डिज़ाइन, कोडिंग और रोज़मर्रा के कामों के लिए टूल देखें। श्रेणी से ब्राउज़ करें, कीमतों की तुलना करें, और अपनी ज़रूरत के अनुसार टूल खोजने के लिए Ask AI का उपयोग करें।",
@@ -349,6 +351,7 @@ export const translations = {
     toolsNav: "Outils",
     aboutNav: "À propos",
     talkToAiNav: "Parler à l’IA",
+    compareTools: "Comparer les outils",
     aboutTitle: "À propos d’AI Directory",
     aboutCopy:
       "AI Directory est un répertoire sélectionné pour découvrir des outils d’IA dédiés à l’écriture, à la recherche, au design, au code et aux tâches du quotidien. Parcourez les catégories, comparez les tarifs et utilisez Ask AI pour trouver l’outil adapté à vos besoins.",

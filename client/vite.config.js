@@ -14,6 +14,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(clientRoot, "index.html"),
+        compare: resolve(clientRoot, "compare.html"),
         aiSearch: resolve(clientRoot, "ai-search.html"),
         about: resolve(clientRoot, "about.html"),
         contact: resolve(clientRoot, "contact.html"),

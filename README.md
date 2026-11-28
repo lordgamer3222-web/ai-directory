@@ -75,7 +75,7 @@ Do not add an example or another publisher's ID. If your site is not approved, l
 
 ### Cloudflare Pages and search routes
 
-For Cloudflare Pages, set the project root to the repository root, the build command to `npm run build`, and the build output directory to `client/dist`. Vite builds separate HTML entries for `/`, `/ai-search`, `/about`, `/contact`, `/privacy-policy`, `/terms-and-conditions`, and `/admin`. Keep the generated root `404.html` so unknown paths return a not-found page instead of the homepage. The `client/public/robots.txt`, `sitemap.xml`, `_redirects`, and `_headers` files are copied into the production output.
+For Cloudflare Pages, set the project root to the repository root, the build command to `npm run build`, and the build output directory to `client/dist`. Vite builds separate HTML entries for `/`, `/ai-search`, `/compare`, `/about`, `/contact`, `/privacy-policy`, `/terms-and-conditions`, and `/admin`. Keep the generated root `404.html` so unknown paths return a not-found page instead of the homepage. The `client/public/robots.txt`, `sitemap.xml`, `_redirects`, and `_headers` files are copied into the production output.
 
 Submit `https://aidirectory.co.in/sitemap.xml` in Google Search Console after deployment. Confirm the custom domain serves HTTPS and redirects any `www` or trailing-slash variants to the canonical URLs.
 
@@ -88,6 +88,7 @@ The default upload directory is `server/uploads/tool-icons`. Many cloud hosts us
 - Searchable AI tools catalog with category, price, sort, and saved filters
 - Same-site uploaded custom icons, built-in brand marks, and initial-letter fallback
 - Dedicated AI search route with its own title, description, and canonical URL
+- Interactive AI tool comparison page using catalog fields and official links
 - Crawlable static pages, robots file, and XML sitemap
 - Protected admin CRUD and moderated community submissions
 - Gemini tool recommendations linked only to MongoDB catalog URLs

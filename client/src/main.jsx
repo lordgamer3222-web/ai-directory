@@ -13,6 +13,7 @@ import ToolLogo from "./components/ToolLogo";
 import PrivacyConsent, { useAdsConsent } from "./components/PrivacyConsent";
 import AdminApp from "./admin/AdminApp";
 import LegalPage from "./pages/LegalPage";
+import ComparisonPage from "./pages/ComparisonPage";
 import {
   ArrowRight,
   Bookmark,
@@ -1403,6 +1404,9 @@ function App() {
             <a href="/ai-search" onClick={() => setMobileMenu(false)}>
               {copy.talkToAiNav || translations.en.talkToAiNav}
             </a>
+            <a href="/compare" onClick={() => setMobileMenu(false)}>
+              {copy.compareTools || "Compare tools"}
+            </a>
             <button
               className="nav-text-button"
               onClick={() => {
@@ -2273,6 +2277,7 @@ function App() {
 const root = document.getElementById("root");
 const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
 const isAdminRoute = currentPath === "/admin";
+const isComparisonRoute = currentPath === "/compare";
 const legalPageByPath = {
   "/about": "about",
   "/privacy-policy": "privacy",
@@ -2285,6 +2290,8 @@ createRoot(root).render(
   <React.StrictMode>
     {isAdminRoute ? (
       <AdminApp />
+    ) : isComparisonRoute ? (
+      <ComparisonPage />
     ) : legalPage ? (
       <LegalPage page={legalPage} />
     ) : (
