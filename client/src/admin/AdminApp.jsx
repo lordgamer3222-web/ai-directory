@@ -61,7 +61,7 @@ function AdminLogin({ onLogin, busy, error }) {
         <span className="admin-brand-mark">
           <ShieldCheck size={25} />
         </span>
-        <p className="admin-eyebrow">AI LIBRARY · ADMIN</p>
+        <p className="admin-eyebrow">AI DIRECTORY · ADMIN</p>
         <h1>Sign in to manage your directory</h1>
         <p className="admin-muted">
           Use the admin token configured on your server.
@@ -88,7 +88,7 @@ function AdminLogin({ onLogin, busy, error }) {
           {busy ? "Checking…" : "Continue"}
         </button>
         <a href="/" className="admin-back-link">
-          Back to AI Library
+          Back to AI Directory
         </a>
       </form>
     </main>
@@ -650,8 +650,8 @@ export default function AdminApp() {
               <div>
                 <span>Tool icon</span>
                 <small>
-                  Automatic favicon from the official domain is used unless you
-                  upload a custom icon.
+                  Without an uploaded icon, the tool card displays the tool’s
+                  first letter. Upload a local image to use a custom icon.
                 </small>
               </div>
               <div className="admin-icon-controls">

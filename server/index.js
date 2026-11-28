@@ -14,6 +14,7 @@ import rateLimit from "express-rate-limit";
 import { generateAIResponse } from "./services/aiProvider.js";
 
 const app = express();
+if (process.env.NODE_ENV === "production") app.set("trust proxy", 1);
 const PORT = process.env.PORT || 10000;
 const HOST = "0.0.0.0";
 const serverDir = path.dirname(fileURLToPath(import.meta.url));
@@ -46,6 +47,11 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
+app.use("/api", (_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Pragma", "no-cache");
+  next();
+});
 app.use((_req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
@@ -89,7 +95,7 @@ const toolSchema = new mongoose.Schema(
     },
     url: { type: String, default: "", trim: true, maxlength: 2048 },
     tags: [{ type: String, trim: true, maxlength: 40 }],
-    // This stores only an uploaded icon path; empty means use the site's favicon.
+    // This stores only a same-site uploaded icon path; empty uses initials.
     icon: { type: String, default: "", maxlength: 300 },
     featured: { type: Boolean, default: false },
   },
@@ -571,6 +577,20 @@ const rateLimitUserAuth = rateLimit({
   legacyHeaders: false,
   message: { error: "Too many account attempts. Please try again later." },
 });
+const rateLimitToolSuggestions = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many suggestions. Please try again later." },
+});
+const rateLimitFeedback = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many feedback submissions. Please try again later." },
+});
 
 app.post("/api/auth/register", rateLimitUserAuth, async (req, res) => {
   if (!databaseConnected())
@@ -607,7 +627,7 @@ app.post("/api/auth/register", rateLimitUserAuth, async (req, res) => {
       return res
         .status(409)
         .json({ error: "An account with this email already exists." });
-    console.error("Could not create user account:", error.message);
+    console.error("Could not create user account:", error.name);
     return res.status(500).json({ error: "Could not create your account." });
   }
 });
@@ -646,7 +666,7 @@ app.post("/api/auth/login", rateLimitUserAuth, async (req, res) => {
       user: { id: String(user._id), email: user.email },
     });
   } catch (error) {
-    console.error("Could not sign in user:", error.message);
+    console.error("Could not sign in user:", error.name);
     return res.status(500).json({ error: "Could not sign you in." });
   }
 });
@@ -715,9 +735,9 @@ app.post(
             body: JSON.stringify({
               from: sender,
               to: [user.email],
-              subject: "Your AI Library password reset code",
-              text: `Your AI Library verification code is ${code}. It expires in 10 minutes. If you did not request this, you can ignore this email.`,
-              html: `<p>Your AI Library verification code is:</p><p style="font-size:28px;font-weight:700;letter-spacing:6px">${code}</p><p>It expires in 10 minutes. If you did not request this, you can ignore this email.</p>`,
+              subject: "Your AI Directory password reset code",
+              text: `Your AI Directory verification code is ${code}. It expires in 10 minutes. If you did not request this, you can ignore this email.`,
+              html: `<p>Your AI Directory verification code is:</p><p style="font-size:28px;font-weight:700;letter-spacing:6px">${code}</p><p>It expires in 10 minutes. If you did not request this, you can ignore this email.</p>`,
             }),
           });
           if (!response.ok) {
@@ -728,7 +748,7 @@ app.post(
             await PasswordResetCode.deleteOne({ _id: resetRecord._id });
           }
         } catch (error) {
-          console.error("Could not send password reset email:", error.message);
+          console.error("Could not send password reset email:", error.name);
           await PasswordResetCode.deleteOne({ _id: resetRecord._id });
         }
       }
@@ -738,7 +758,7 @@ app.post(
           "If an account exists for that email, a verification code has been sent.",
       });
     } catch (error) {
-      console.error("Could not request a password reset:", error.message);
+      console.error("Could not request a password reset:", error.name);
       return res.status(500).json({ error: "Could not request a reset code." });
     }
   },
@@ -845,7 +865,7 @@ app.post(
         user: { id: String(user._id), email: user.email },
       });
     } catch (error) {
-      console.error("Could not reset user password:", error.message);
+      console.error("Could not reset user password:", error.name);
       return res.status(500).json({ error: "Could not reset your password." });
     }
   },
@@ -859,7 +879,7 @@ app.get("/api/auth/session", async (req, res) => {
       user: user ? { id: String(user._id), email: user.email } : null,
     });
   } catch (error) {
-    console.error("Could not read user session:", error.message);
+    console.error("Could not read user session:", error.name);
     return res.status(500).json({ error: "Could not read your session." });
   }
 });
@@ -877,7 +897,7 @@ app.post("/api/auth/logout", async (req, res) => {
       }
     }
   } catch (error) {
-    console.error("Could not invalidate user session:", error.message);
+    console.error("Could not invalidate user session:", error.name);
     clearUserSessionCookie(req, res);
     return res.status(500).json({ error: "Could not sign you out." });
   }
@@ -929,7 +949,7 @@ app.post("/api/auth/merge-saved", async (req, res) => {
     }
     return res.json({ ok: true });
   } catch (error) {
-    console.error("Could not transfer saved tools:", error.message);
+    console.error("Could not transfer saved tools:", error.name);
     return res.status(500).json({ error: "Could not transfer saved tools." });
   }
 });
@@ -1007,7 +1027,7 @@ app.get("/api/tools", async (req, res) => {
       .lean();
     return res.json(tools);
   } catch (error) {
-    console.error("Could not load tools:", error.message);
+    console.error("Could not load tools:", error.name);
     return res.status(500).json({ error: "Could not load tools." });
   }
 });
@@ -1027,11 +1047,19 @@ app.post(
   descriptionTranslationLimiter,
   async (req, res) => {
     const targetLanguage =
-      { hi: "Hindi", fr: "French" }[req.body?.language] || "";
+      {
+        hi: "Hindi",
+        fr: "French",
+        es: "Spanish",
+        "pt-BR": "Brazilian Portuguese",
+        bn: "Bengali",
+        ar: "Arabic",
+        "zh-CN": "Simplified Chinese",
+      }[req.body?.language] || "";
     const requestedIds = req.body?.toolIds;
 
     if (!targetLanguage) {
-      return res.status(400).json({ error: "Choose Hindi or French." });
+      return res.status(400).json({ error: "Choose a supported language." });
     }
     if (
       !Array.isArray(requestedIds) ||
@@ -1157,7 +1185,7 @@ ${JSON.stringify(records)}`;
         })),
       });
     } catch (error) {
-      console.error("Could not translate tool descriptions:", error.message);
+      console.error("Could not translate tool descriptions:", error.name);
       return res.status(503).json({
         error: "Tool descriptions could not be translated right now.",
       });
@@ -1174,7 +1202,7 @@ app.get("/api/admin/tools", requireAdmin, async (_req, res) => {
     const tools = await Tool.find({}).sort({ name: 1 }).limit(2000).lean();
     return res.json(tools);
   } catch (error) {
-    console.error("Could not load admin tools:", error.message);
+    console.error("Could not load admin tools:", error.name);
     return res.status(500).json({ error: "Could not load tools." });
   }
 });
@@ -1207,7 +1235,7 @@ app.post("/api/admin/tools", requireAdmin, async (req, res) => {
         .json({ error: "A tool with this ID already exists." });
     if (/icon|image|upload/i.test(error.message))
       return res.status(400).json({ error: error.message });
-    console.error("Could not add tool:", error.message);
+    console.error("Could not add tool:", error.name);
     return res.status(400).json({
       error: "Could not add this tool. Check its fields and try again.",
     });
@@ -1252,7 +1280,7 @@ app.patch("/api/admin/tools/:id", requireAdmin, async (req, res) => {
         .json({ error: "A tool with this ID already exists." });
     if (/icon|image|upload/i.test(error.message))
       return res.status(400).json({ error: error.message });
-    console.error("Could not update tool:", error.message);
+    console.error("Could not update tool:", error.name);
     return res.status(400).json({
       error: "Could not update this tool. Check its fields and try again.",
     });
@@ -1271,7 +1299,7 @@ app.delete("/api/admin/tools/:id", requireAdmin, async (req, res) => {
     ]);
     return res.json({ ok: true, id: tool.id });
   } catch (error) {
-    console.error("Could not delete tool:", error.message);
+    console.error("Could not delete tool:", error.name);
     return res.status(500).json({ error: "Could not delete this tool." });
   }
 });
@@ -1286,7 +1314,7 @@ app.get("/api/admin/submissions", requireAdmin, async (_req, res) => {
       .lean();
     return res.json(submissions);
   } catch (error) {
-    console.error("Could not load submissions:", error.message);
+    console.error("Could not load submissions:", error.name);
     return res.status(500).json({ error: "Could not load submissions." });
   }
 });
@@ -1327,7 +1355,7 @@ app.post(
       await submission.save();
       return res.json({ ok: true, tool });
     } catch (error) {
-      console.error("Could not approve submission:", error.message);
+      console.error("Could not approve submission:", error.name);
       return res
         .status(500)
         .json({ error: "Could not approve this submission." });
@@ -1344,7 +1372,7 @@ app.delete("/api/admin/submissions/:id", requireAdmin, async (req, res) => {
     await ToolSubmission.deleteOne({ _id: req.params.id, status: "pending" });
     return res.json({ ok: true });
   } catch (error) {
-    console.error("Could not remove submission:", error.message);
+    console.error("Could not remove submission:", error.name);
     return res.status(500).json({ error: "Could not remove this submission." });
   }
 });
@@ -1372,7 +1400,7 @@ app.get("/api/saved-tools", async (req, res) => {
       }));
     return res.json({ saved, persistence: "mongodb" });
   } catch (error) {
-    console.error("Could not load saved tools:", error.message);
+    console.error("Could not load saved tools:", error.name);
     return res.status(500).json({ error: "Could not load saved tools." });
   }
 });
@@ -1398,7 +1426,7 @@ app.post("/api/saved-tools", async (req, res) => {
   } catch (error) {
     if (error.code === 11000)
       return res.json({ ok: true, saved: true, toolId });
-    console.error("Could not save tool:", error.message);
+    console.error("Could not save tool:", error.name);
     return res.status(500).json({ error: "Could not save this tool." });
   }
 });
@@ -1416,13 +1444,13 @@ app.delete("/api/saved-tools/:toolId", async (req, res) => {
     await SavedTool.deleteOne({ visitorId, toolId });
     return res.json({ ok: true, saved: false, toolId });
   } catch (error) {
-    console.error("Could not remove saved tool:", error.message);
+    console.error("Could not remove saved tool:", error.name);
     return res.status(500).json({ error: "Could not remove this saved tool." });
   }
 });
 
 // Public submissions are queued for review and never appear in the catalog until approved.
-app.post("/api/tools", async (req, res) => {
+app.post("/api/tools", rateLimitToolSuggestions, async (req, res) => {
   const {
     name,
     category,
@@ -1467,7 +1495,7 @@ app.post("/api/tools", async (req, res) => {
     });
     return res.status(201).json({ success: true, pendingReview: true });
   } catch (error) {
-    console.error("Could not submit tool:", error.message);
+    console.error("Could not submit tool:", error.name);
     return res.status(400).json({
       error:
         "Could not submit this suggestion. Check the fields and try again.",
@@ -1477,7 +1505,7 @@ app.post("/api/tools", async (req, res) => {
 
 // ==================== FEEDBACK ====================
 
-app.post("/api/feedback", async (req, res) => {
+app.post("/api/feedback", rateLimitFeedback, async (req, res) => {
   const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
   const email =
     typeof req.body?.email === "string" ? req.body.email.trim() : "";
@@ -1516,7 +1544,7 @@ app.post("/api/feedback", async (req, res) => {
       id: String(feedback._id),
     });
   } catch (error) {
-    console.error("Could not save feedback:", error.message);
+    console.error("Could not save feedback:", error.name);
     return res.status(500).json({ error: "Could not save your feedback." });
   }
 });
@@ -1689,7 +1717,7 @@ app.post("/api/ai/ask", aiRateLimiter, async (req, res) => {
       }),
     );
 
-    const prompt = `You are Ask Me, a helpful conversational assistant for AI Library.
+    const prompt = `You are Ask AI, a helpful conversational assistant for AI Directory.
 
 Respond in ${responseLanguage}. Sound natural, warm, and direct. Answer the user's actual question first instead of forcing a tool recommendation. You may answer general questions conversationally. Recommend up to 4 AI tools only when the user is looking for a tool or a catalog tool clearly helps.
 
@@ -1753,7 +1781,7 @@ ${JSON.stringify(message)}`;
         reason:
           typeof item.reason === "string"
             ? removeInlineUrls(item.reason).slice(0, 240)
-            : "A relevant tool from the AI Library catalog.",
+            : "A relevant tool from the AI Directory catalog.",
       });
 
       if (selected.length >= 4) break;
@@ -1799,7 +1827,7 @@ ${JSON.stringify(message)}`;
       model: generated.model || "unknown",
     });
   } catch (error) {
-    console.error("AI request failed:", error.message);
+    console.error("AI request failed:", error.name);
 
     return res.status(502).json({
       error: "AI services are temporarily unavailable. Please try again.",
@@ -1813,7 +1841,7 @@ app.use((_req, res) =>
   res.status(404).json({ error: "API endpoint not found." }),
 );
 app.use((error, _req, res, _next) => {
-  console.error("Unhandled server error:", error.message);
+  console.error("Unhandled server error:", error.name);
   if (res.headersSent) return;
   if (error.type === "entity.too.large") {
     return res.status(413).json({
@@ -1847,7 +1875,7 @@ async function start() {
     } catch (error) {
       console.error(
         "MongoDB connection or catalog setup failed:",
-        error.message,
+        error.name,
       );
       console.warn(
         "Starting in demo mode. Database-backed features will not persist.",
@@ -1858,11 +1886,11 @@ async function start() {
   }
 
   app.listen(PORT, HOST, () => {
-    console.log(`AI Library API listening on ${HOST}:${PORT}`);
+    console.log(`AI Directory API listening on ${HOST}:${PORT}`);
   });
 }
 
 start().catch((error) => {
-  console.error("Failed to start server:", error.message);
+  console.error("Failed to start server:", error.name);
   process.exit(1);
 });

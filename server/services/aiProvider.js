@@ -2,7 +2,7 @@ const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 const timeout = Number(process.env.AI_TIMEOUT_MS || 12000);
 
 const SYSTEM_PROMPT =
-  "You are Ask Me, a natural and helpful conversational assistant for AI Library. " +
+  "You are Ask AI, a natural and helpful conversational assistant for AI Directory. " +
   "Answer the user's actual question directly and use the language requested in the prompt. " +
   "Return valid JSON with this structure: " +
   '{"answer":"A helpful response","recommendations":[{"id":"tool_id","reason":"Why it matches"}]}. ' +
@@ -74,12 +74,14 @@ async function callGemini(prompt) {
   const model = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
 
   const url =
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent` +
-    `?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`;
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
   const response = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": process.env.GEMINI_API_KEY,
+    },
     signal: AbortSignal.timeout(timeout),
     body: JSON.stringify({
       systemInstruction: {
@@ -121,19 +123,15 @@ async function callGemini(prompt) {
 
 export async function generateAIResponse(prompt) {
   try {
-    const result = await callGroq(prompt);
-    console.log("AI provider used: Groq");
-    return result;
+    return await callGroq(prompt);
   } catch (groqError) {
-    console.warn("Groq failed; trying Gemini:", groqError.message);
+    console.warn("Groq request failed; trying Gemini.", groqError.name);
   }
 
   try {
-    const result = await callGemini(prompt);
-    console.log("AI provider used: Gemini fallback");
-    return result;
+    return await callGemini(prompt);
   } catch (geminiError) {
-    console.error("Both AI providers failed:", geminiError.message);
+    console.error("Both AI providers failed.", geminiError.name);
     throw new Error("AI services temporarily unavailable");
   }
 }

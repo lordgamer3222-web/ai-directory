@@ -10,6 +10,7 @@ import Footer from "./footer";
 import { languageOptions, translations } from "./i18n";
 import toolsData from "./data/tools";
 import ToolLogo from "./components/ToolLogo";
+import PrivacyConsent, { useAdsConsent } from "./components/PrivacyConsent";
 import AdminApp from "./admin/AdminApp";
 import LegalPage from "./pages/LegalPage";
 import {
@@ -377,6 +378,9 @@ function TypewriterPlaceholderInput({
 }
 
 function App() {
+  const isDedicatedAiSearch =
+    (window.location.pathname.replace(/\/+$/, "") || "/") === "/ai-search";
+  const adsAllowed = useAdsConsent();
   const [tools, setTools] = useState(() => initialTools);
   const [catalogOrder, setCatalogOrder] = useState(() =>
     shuffleCatalog(initialTools),
@@ -386,16 +390,7 @@ function App() {
   const [category, setCategory] = useState("All");
   const [price, setPrice] = useState("All");
   const [sort, setSort] = useState("Featured");
-  const [saved, setSaved] = useState(() => {
-    try {
-      const parsed = JSON.parse(
-        localStorage.getItem("ai-library-saved-tools") || "[]",
-      );
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  });
+  const [saved, setSaved] = useState([]);
   const [language, setLanguage] = useState(() =>
     readStoredValue(
       "ai-library-language",
@@ -403,7 +398,19 @@ function App() {
       "en",
     ),
   );
-  const copy = translations[language] || translations.en;
+  const translationSource = translations[language] || translations.en;
+  const copy = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(translationSource).map(([key, value]) => [
+          key,
+          typeof value === "string"
+            ? value.replace(/AI Library/gi, "AI Directory")
+            : value,
+        ]),
+      ),
+    [translationSource],
+  );
   const [localizedDescriptions, setLocalizedDescriptions] = useState(
     readDescriptionTranslationCache,
   );
@@ -443,8 +450,8 @@ function App() {
     }
   });
   const [toolsLoading, setToolsLoading] = useState(true);
-  const [assistantOpen, setAssistantOpen] = useState(false);
-  const [assistantFullPage, setAssistantFullPage] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(isDedicatedAiSearch);
+  const [assistantFullPage, setAssistantFullPage] = useState(isDedicatedAiSearch);
   const [voiceListening, setVoiceListening] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState("");
   const speechRecognitionRef = useRef(null);
@@ -460,6 +467,29 @@ function App() {
   const [submitted, setSubmitted] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
 
+  function clearGuestSavedTools() {
+    setSaved([]);
+    setShowSavedOnly(false);
+    try {
+      localStorage.removeItem("ai-library-saved-tools");
+    } catch {}
+  }
+
+  function requireLoginForSavedTools() {
+    setAuthMode("login");
+    setAuthError("");
+    setAuthNotice(copy.saveRequiresLogin);
+    setAuthOpen(true);
+  }
+
+  function toggleSavedToolsView() {
+    if (!currentUser) {
+      requireLoginForSavedTools();
+      return;
+    }
+    setShowSavedOnly((value) => !value);
+  }
+
   useLayoutEffect(() => {
     const root = document.documentElement;
     const media = window.matchMedia("(prefers-color-scheme: dark)");
@@ -468,6 +498,7 @@ function App() {
         theme === "system" ? (media.matches ? "dark" : "light") : theme;
       root.dataset.theme = activeTheme;
       root.lang = language;
+      root.dir = language === "ar" ? "rtl" : "ltr";
       root.style.colorScheme = activeTheme;
       document
         .querySelector('meta[name="theme-color"]')
@@ -530,6 +561,10 @@ function App() {
     speechRecognitionRef.current = null;
     setVoiceListening(false);
     setVoiceStatus("");
+    if (isDedicatedAiSearch) {
+      window.location.assign("/");
+      return;
+    }
     setAssistantOpen(false);
     setAssistantFullPage(false);
   }
@@ -550,7 +585,16 @@ function App() {
 
     const recognition = new Recognition();
     recognition.lang =
-      { en: "en-US", hi: "hi-IN", fr: "fr-FR" }[language] || "en-US";
+      {
+        en: "en-US",
+        hi: "hi-IN",
+        fr: "fr-FR",
+        es: "es-ES",
+        "pt-BR": "pt-BR",
+        bn: "bn-IN",
+        ar: "ar-SA",
+        "zh-CN": "zh-CN",
+      }[language] || "en-US";
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
     recognition.onstart = () => {
@@ -728,7 +772,12 @@ function App() {
 
   useEffect(() => {
     const clientId = import.meta.env.VITE_ADSENSE_CLIENT_ID || "";
-    if (!/^ca-pub-[0-9]+$/.test(clientId)) return undefined;
+    if (!/^ca-pub-[0-9]+$/.test(clientId) || !adsAllowed) {
+      document
+        .querySelector("script[data-ai-library-adsense='true']")
+        ?.remove();
+      return undefined;
+    }
     if (document.querySelector("script[data-ai-library-adsense='true']"))
       return undefined;
     const script = document.createElement("script");
@@ -738,7 +787,7 @@ function App() {
     script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(clientId)}`;
     document.head.appendChild(script);
     return () => script.remove();
-  }, []);
+  }, [adsAllowed]);
 
   useEffect(() => {
     let active = true;
@@ -762,9 +811,21 @@ function App() {
   useEffect(() => {
     let active = true;
     apiFetch("/api/auth/session", { credentials: "include" })
-      .then((response) => (response.ok ? response.json() : Promise.reject()))
+      .then(async (response) => {
+        if (response.status === 401) {
+          if (active) clearGuestSavedTools();
+          return null;
+        }
+        if (!response.ok) return null;
+        return response.json();
+      })
       .then(async (session) => {
-        if (!active || !session?.user) return;
+        if (!active) return;
+        if (!session?.user) {
+          setCurrentUser(null);
+          clearGuestSavedTools();
+          return;
+        }
         setCurrentUser(session.user);
         const mergeResponse = await apiFetch("/api/auth/merge-saved", {
           method: "POST",
@@ -774,6 +835,7 @@ function App() {
         });
         if (mergeResponse.status === 401) {
           setCurrentUser(null);
+          clearGuestSavedTools();
           return;
         }
         const response = await apiFetch("/api/saved-tools", {
@@ -781,6 +843,7 @@ function App() {
         });
         if (response.status === 401) {
           setCurrentUser(null);
+          clearGuestSavedTools();
           return;
         }
         if (!response.ok) return;
@@ -871,6 +934,61 @@ function App() {
   );
 
   useEffect(() => {
+    if (isDedicatedAiSearch || pageTools.length === 0) {
+      document.getElementById("ai-directory-tool-list-schema")?.remove();
+      return;
+    }
+
+    const schema = {
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      name: "AI tools shown in AI Directory",
+      itemListOrder: "https://schema.org/ItemListUnordered",
+      numberOfItems: pageTools.length,
+      itemListElement: pageTools.map((tool, index) => {
+        const item = { "@type": "SoftwareApplication", name: tool.name };
+        const url = safeExternalUrl(tool.url);
+        const description = descriptionForTool(tool);
+        if (url) item.url = url;
+        if (description) item.description = description;
+        if (tool.category) item.applicationCategory = tool.category;
+        return { "@type": "ListItem", position: index + 1, item };
+      }),
+    };
+    let script = document.getElementById("ai-directory-tool-list-schema");
+    if (!script) {
+      script = document.createElement("script");
+      script.id = "ai-directory-tool-list-schema";
+      script.type = "application/ld+json";
+      document.head.append(script);
+    }
+    script.textContent = JSON.stringify(schema).replace(/</g, "\\u003c");
+  }, [pageTools, language, localizedDescriptions, isDedicatedAiSearch]);
+
+  useEffect(() => {
+    if (!isDedicatedAiSearch) return;
+    const title = "AI Search | Find AI Tools for Your Task | AI Directory";
+    const description =
+      "Describe what you want to do and use AI Directory's AI assistant to find matching tools from the catalog.";
+    document.title = title;
+    document.querySelector('meta[name="description"]')?.setAttribute("content", description);
+    document.querySelector('link[rel="canonical"]')?.setAttribute(
+      "href",
+      "https://aidirectory.co.in/ai-search",
+    );
+    const social = {
+      'meta[property="og:title"]': title,
+      'meta[property="og:description"]': description,
+      'meta[property="og:url"]': "https://aidirectory.co.in/ai-search",
+      'meta[name="twitter:title"]': title,
+      'meta[name="twitter:description"]': description,
+    };
+    Object.entries(social).forEach(([selector, content]) =>
+      document.querySelector(selector)?.setAttribute("content", content),
+    );
+  }, [isDedicatedAiSearch]);
+
+  useEffect(() => {
     setCurrentPage((page) => Math.min(page, totalPages));
   }, [totalPages]);
 
@@ -900,12 +1018,12 @@ function App() {
       let nextCache = localizedDescriptions;
       let failed = false;
       const batches = [];
-      for (let index = 0; index < missing.length; index += 8) {
-        batches.push(missing.slice(index, index + 8));
+      for (let index = 0; index < missing.length; index += 4) {
+        batches.push(missing.slice(index, index + 4));
       }
 
-      for (let index = 0; index < batches.length; index += 3) {
-        const batchGroup = batches.slice(index, index + 3);
+      for (let index = 0; index < batches.length; index += 1) {
+        const batchGroup = batches.slice(index, index + 1);
         const results = await Promise.allSettled(
           batchGroup.map((batch) => {
             const requestKey = JSON.stringify([
@@ -990,10 +1108,7 @@ function App() {
 
   async function toggleSaved(tool) {
     if (!currentUser) {
-      setAuthMode("login");
-      setAuthError("");
-      setAuthNotice(copy.saveRequiresLogin);
-      setAuthOpen(true);
+      requireLoginForSavedTools();
       return;
     }
 
@@ -1026,6 +1141,7 @@ function App() {
         );
         if (response.status === 401) {
           setCurrentUser(null);
+          clearGuestSavedTools();
           setAuthMode("login");
           setAuthError("");
           setAuthNotice(copy.sessionExpired);
@@ -1236,16 +1352,38 @@ function App() {
 
   return (
     <>
-      <div className="app-shell" id="home">
+      <div
+        className={isDedicatedAiSearch ? "app-shell ai-search-only" : "app-shell"}
+        id="home"
+      >
         <div className="ambient ambient-one" />
         <div className="ambient ambient-two" />
+        {isDedicatedAiSearch ? (
+          <header className="ai-search-route-header">
+            <a className="brand" href="/" aria-label={copy.aiSearchHome || "AI Directory home"}>
+              <span className="brand-mark">
+                <Sparkles size={25} aria-hidden="true" />
+              </span>
+              <span>
+                AI <b>Directory</b>
+              </span>
+            </a>
+            <div className="ai-search-route-title">
+              <h1>{copy.talkToAiNav || translations.en.talkToAiNav}</h1>
+              <p>{copy.chatSubtitle}</p>
+            </div>
+            <a className="ai-search-back-link" href="/">
+              {copy.backToDirectory || translations.en.backToDirectory}
+            </a>
+          </header>
+        ) : (
         <header className="topbar">
-          <a className="brand" href="#home" aria-label="AI Library home">
+          <a className="brand" href="#home" aria-label="AI Directory home">
             <span className="brand-mark">
               <Sparkles size={27} />
             </span>
             <span>
-              AI <b>Library</b>
+              AI <b>Directory</b>
             </span>
           </a>
           <button
@@ -1262,10 +1400,13 @@ function App() {
             <a href="#about-contact" onClick={() => setMobileMenu(false)}>
               {copy.aboutNav}
             </a>
+            <a href="/ai-search" onClick={() => setMobileMenu(false)}>
+              {copy.talkToAiNav || translations.en.talkToAiNav}
+            </a>
             <button
               className="nav-text-button"
               onClick={() => {
-                setShowSavedOnly((v) => !v);
+                toggleSavedToolsView();
                 setMobileMenu(false);
                 document
                   .getElementById("explore")
@@ -1332,12 +1473,13 @@ function App() {
               className="button button-primary button-small"
               onClick={openAssistant}
             >
-              <Sparkles size={15} /> {copy.talkToAiNav}
+              <Sparkles size={15} /> {copy.askAI}
             </button>
           </div>
         </header>
+        )}
 
-        <main>
+        {!isDedicatedAiSearch && <main>
           <section className="hero">
             <div className="hero-orb orb-left" />
             <div className="hero-orb orb-right" />
@@ -1355,12 +1497,11 @@ function App() {
             </h1>
             <p className="hero-subtitle">{copy.heroSubtitle}</p>
             <div className="hero-actions">
-              <button className="button button-primary" onClick={scrollTools}>
-                <Search size={18} /> {copy.exploreTools}{" "}
-                <ArrowRight size={16} />
+              <button className="button button-primary" onClick={openAssistant}>
+                <Sparkles size={17} /> {copy.askAI} <ArrowRight size={16} />
               </button>
-              <button className="button button-outline" onClick={openAssistant}>
-                <Sparkles size={17} /> {copy.askAI}
+              <button className="button button-outline" onClick={scrollTools}>
+                <Search size={18} /> {copy.exploreTools}
               </button>
             </div>
           </section>
@@ -1392,7 +1533,7 @@ function App() {
                 className={
                   showSavedOnly ? "saved-filter active" : "saved-filter"
                 }
-                onClick={() => setShowSavedOnly((v) => !v)}
+              onClick={toggleSavedToolsView}
               >
                 <Bookmark size={15} />{" "}
                 {showSavedOnly ? copy.showingSaved : copy.savedTools} (
@@ -1609,7 +1750,7 @@ function App() {
           </section>
           <section className="about-section" id="about-contact">
             <div>
-              <span className="about-kicker">AI LIBRARY</span>
+              <span className="about-kicker">AI DIRECTORY</span>
               <h2>{copy.aboutTitle}</h2>
               <p>{copy.aboutCopy}</p>
             </div>
@@ -1640,7 +1781,7 @@ function App() {
               {copy.submitToolCta} <ArrowRight size={16} />
             </button>
           </section>
-        </main>
+        </main>}
         {!assistantOpen && (
           <button
             className="ask-fab"
@@ -1650,14 +1791,16 @@ function App() {
             <span className="fab-glow">
               <MessageCircle size={23} />
             </span>
-            <b>Ask Me</b>
+            <b dir="ltr">Ask AI</b>
           </button>
         )}
         {assistantOpen && (
           <aside
             ref={assistantPanelRef}
             className={
-              assistantFullPage
+              isDedicatedAiSearch
+                ? "chat-panel chat-panel-fullpage ai-search-route-panel"
+                : assistantFullPage
                 ? "chat-panel chat-panel-fullpage"
                 : "chat-panel"
             }
@@ -1693,30 +1836,33 @@ function App() {
               </div>
               <div>
                 <b>
-                  Ask Me <span className="online-dot" />
+                  <span dir="ltr">Ask AI</span>{" "}
+                  <span className="online-dot" />
                 </b>
                 <small>{copy.chatSubtitle}</small>
               </div>
-              <button
-                type="button"
-                onClick={() => setAssistantFullPage((fullPage) => !fullPage)}
-                aria-label={
-                  assistantFullPage
-                    ? copy.useFloatingAssistant
-                    : copy.openFullPageAssistant
-                }
-                title={
-                  assistantFullPage
-                    ? copy.useFloatingAssistant
-                    : copy.openFullPageAssistant
-                }
-              >
-                {assistantFullPage ? (
-                  <Minimize2 size={18} />
-                ) : (
-                  <Maximize2 size={18} />
-                )}
-              </button>
+              {!isDedicatedAiSearch && (
+                <button
+                  type="button"
+                  onClick={() => setAssistantFullPage((fullPage) => !fullPage)}
+                  aria-label={
+                    assistantFullPage
+                      ? copy.useFloatingAssistant
+                      : copy.openFullPageAssistant
+                  }
+                  title={
+                    assistantFullPage
+                      ? copy.useFloatingAssistant
+                      : copy.openFullPageAssistant
+                  }
+                >
+                  {assistantFullPage ? (
+                    <Minimize2 size={18} />
+                  ) : (
+                    <Maximize2 size={18} />
+                  )}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={closeAssistant}
@@ -1852,7 +1998,7 @@ function App() {
                 <X />
               </button>
               <div className="modal-kicker">
-                <Sparkles size={15} /> AI LIBRARY
+                <Sparkles size={15} /> AI DIRECTORY
               </div>
               <h2>
                 {authMode === "register"
@@ -2118,7 +2264,8 @@ function App() {
           </div>
         )}
       </div>
-      <Footer language={language} />
+      {!isDedicatedAiSearch && <Footer language={language} />}
+      <PrivacyConsent language={language} />
     </>
   );
 }

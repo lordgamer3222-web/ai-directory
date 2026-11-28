@@ -1,10 +1,11 @@
 import React, { useEffect, useLayoutEffect, useState } from "react";
 import { ArrowLeft, ArrowRight, ExternalLink, FileText, Mail, ShieldCheck, Sparkles } from "lucide-react";
 import Footer from "../footer";
-import { translations } from "../i18n";
+import PrivacyConsent from "../components/PrivacyConsent";
+import { languageOptions, translations } from "../i18n";
 
 const CONTACT_EMAIL = "ravitripathi3222@gmail.com";
-const LAST_UPDATED = "November 24, 2026";
+const LAST_UPDATED = "November 26, 2026";
 
 const pageDetails = {
   about: {
@@ -78,14 +79,14 @@ function AboutContent() {
         <p>
           AI Directory helps people discover AI tools for writing, research,
           design, coding, and everyday work. Browse the catalog by category and
-          pricing, or describe a task to Ask Me for relevant tools from the
+          pricing, or describe a task to Ask AI for relevant tools from the
           directory.
         </p>
       </PageSection>
       <PageSection title="How the directory works">
         <p>
           The catalog brings tool names, descriptions, categories, pricing, and
-          official website links together in one place. Ask Me uses your request
+          official website links together in one place. Ask AI uses your request
           to select relevant entries from that catalog. Product features and
           prices can change, so check the provider’s official site before making
           a decision.
@@ -127,9 +128,9 @@ function PrivacyContent() {
         </p>
       </PageSection>
 
-      <PageSection title="Ask Me and AI providers">
+      <PageSection title="Ask AI and AI providers">
         <p>
-          When you use Ask Me, your current prompt and up to eight recent chat
+          When you use Ask AI, your current prompt and up to eight recent chat
           messages are sent to the site’s AI service along with selected public
           catalog entries. The service tries Groq first and may use Google
           Gemini if it needs to fall back. If you use description translation,
@@ -154,22 +155,45 @@ function PrivacyContent() {
           it. The cookie is used to keep your account session working.
         </p>
         <p>
-          The site also uses your browser’s local storage to remember your
-          theme, language, guest ID, saved tools before sign-in, Ask Me panel
-          position and size, and cached translated descriptions. You can clear
-          this information through your browser settings. Clearing it may reset
-          these preferences or remove locally saved tools.
+          The site also uses browser storage for your theme, language, guest ID,
+          signed-in saved-tools cache, Ask AI panel position and size, cached
+          translated descriptions, and optional-ad choice. The current app only
+          shows saved tools after sign-in; the browser cache mirrors that
+          account’s saved IDs. The ad-choice record includes its version,
+          decision, and time and stays in this browser. You can clear browser
+          storage in your browser settings; this may reset preferences or sign
+          you out.
+        </p>
+      </PageSection>
+
+      <PageSection title="Age and parental consent">
+        <p>
+          Account registration currently does not collect or verify a date of
+          birth, age, or parental consent, and the server does not enforce an
+          age check. We do not have a verifiable parent or guardian identity
+          provider configured, so we cannot confirm parental consent for a
+          child’s account. The current registration flow does not reliably block
+          under-18 users, and this notice is not an age check or parental
+          consent process. Before intentionally offering accounts to children,
+          a verifiable parent or guardian verification service and server-side
+          checks must be selected and configured. If a child’s personal
+          information was submitted, contact us to request its review or
+          deletion. We will not treat a checkbox or self-entered date as
+          verified parental consent.
         </p>
       </PageSection>
 
       <PageSection title="Google advertising and other Google services">
         <p>
-          This site loads Google AdSense advertising. Google and advertising
-          partners may place or read cookies, use web beacons, and process IP
-          addresses or other browser identifiers when ads are served. These
-          technologies can be used to deliver and measure ads, prevent fraud,
-          and, depending on your settings and location, personalize ads based
-          on visits to this or other sites.
+          If AdSense is configured, its script remains off until you allow
+          optional ads in the privacy choices panel. If you allow them, Google
+          may use cookies and receive browser, device, network, and ad
+          interaction information to deliver, personalize, and measure ads and
+          help prevent fraud. Declining does not limit directory features. You
+          can change your choice at any time using the privacy choices button.
+          If you withdraw after the ad service has loaded, this site stops
+          loading it again; cookies already set by Google may need to be managed
+          through your browser or Google settings.
         </p>
         <p>
           You can manage Google ad personalization in{" "}
@@ -178,21 +202,43 @@ function PrivacyContent() {
           <ResourceLink href="https://policies.google.com/technologies/partner-sites?hl=en">partner-sites privacy notice</ResourceLink>
           , and use the industry opt-out page at{" "}
           <ResourceLink href="https://www.aboutads.info/choices/">aboutads.info</ResourceLink>
-          . The site also loads Google Fonts and may request tool favicons from
-          Google; those requests connect your browser to Google.
+          . Tool cards may load logo images from the Simple Icons CDN or a tool’s
+          official website. Your browser connects to that provider when an
+          image loads. The site does not load Google Fonts or Google-hosted
+          tool favicons.
+        </p>
+      </PageSection>
+
+      <PageSection title="Voice input">
+        <p>
+          Voice input starts only when you press the microphone button. The
+          browser’s speech-recognition feature processes the audio and may send
+          it to a service operated by your browser provider. AI Directory does
+          not record or store the audio; the recognized text is placed in the
+          Ask AI prompt. It is sent to the AI providers only if you submit that
+          prompt. Check your browser provider’s privacy information for how it
+          handles speech requests.
         </p>
       </PageSection>
 
       <PageSection title="Other service providers and links">
         <p>
           The service uses MongoDB to store account, saved-tool, suggestion, and
-          feedback records; Render hosts the API; and Resend sends password
-          reset emails. External AI tool links take you to services with their
+          feedback records; Render hosts the API; and Resend sends transactional
+          password-reset codes to the account email. There is no marketing email
+          system. External AI tool links take you to services with their
           own privacy policies. These providers handle information under their
           own practices: <ResourceLink href="https://resend.com/legal/privacy-policy">Resend</ResourceLink>,{" "}
           <ResourceLink href="https://render.com/privacy">Render</ResourceLink>,{" "}
           <ResourceLink href="https://www.mongodb.com/legal/privacy-policy">MongoDB</ResourceLink>, and{" "}
           <ResourceLink href="https://policies.google.com/privacy">Google</ResourceLink>.
+        </p>
+        <p>
+          No Google Analytics, advertising pixel, session-replay, mouse-tracking,
+          or keystroke-recording integration is included in the current code.
+          The browser uses locally installed system fonts and same-site custom
+          icons or initials. Hosting providers still receive standard request
+          information needed to deliver and secure the site.
         </p>
       </PageSection>
 
@@ -278,7 +324,7 @@ function TermsContent() {
       </PageSection>
       <PageSection title="AI recommendations">
         <p>
-          Ask Me generates suggestions from your request and the directory
+          Ask AI generates suggestions from your request and the directory
           catalog. AI output can be incomplete, outdated, or incorrect. Treat it
           as general information, check important details independently, and do
           not rely on it as professional, legal, financial, medical, or other
@@ -334,7 +380,11 @@ export default function LegalPage({ page }) {
     readPreference("ai-library-theme", ["system", "light", "dark"], "system"),
   )[0];
   const language = useState(() =>
-    readPreference("ai-library-language", ["en", "hi", "fr"], "en"),
+    readPreference(
+      "ai-library-language",
+      languageOptions.map((item) => item.value),
+      "en",
+    ),
   )[0];
   const copy = translations[language] || translations.en;
 
@@ -385,12 +435,12 @@ export default function LegalPage({ page }) {
         <div className="ambient ambient-one" aria-hidden="true" />
         <div className="ambient ambient-two" aria-hidden="true" />
         <header className="topbar legal-topbar">
-          <a className="brand" href="/" aria-label="AI Library home">
+          <a className="brand" href="/" aria-label="AI Directory home">
             <span className="brand-mark">
               <Sparkles size={25} aria-hidden="true" />
             </span>
             <span>
-              AI <b>Library</b>
+              AI <b>Directory</b>
             </span>
           </a>
           <a className="legal-back-link" href="/">
@@ -415,6 +465,7 @@ export default function LegalPage({ page }) {
         </main>
       </div>
       <Footer language={language} />
+      <PrivacyConsent language={language} />
     </>
   );
 }
