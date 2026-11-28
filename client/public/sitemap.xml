@@ -1,10 +1,91 @@
+
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://aidirectory.co.in/</loc></url>
-  <url><loc>https://aidirectory.co.in/compare</loc></url>
-  <url><loc>https://aidirectory.co.in/ai-search</loc></url>
-  <url><loc>https://aidirectory.co.in/about</loc></url>
-  <url><loc>https://aidirectory.co.in/contact</loc></url>
-  <url><loc>https://aidirectory.co.in/privacy-policy</loc></url>
-  <url><loc>https://aidirectory.co.in/terms-and-conditions</loc></url>
+
+    <!-- MAIN WEBSITE -->
+    <url>
+        <loc>https://aidirectory.co.in/</loc>
+    </url>
+
+    <!-- EXISTING PAGES -->
+    <url>
+        <loc>https://aidirectory.co.in/compare</loc>
+    </url>
+
+    <url>
+        <loc>https://aidirectory.co.in/ai-search</loc>
+    </url>
+
+    <url>
+        <loc>https://aidirectory.co.in/about</loc>
+    </url>
+
+    <url>
+        <loc>https://aidirectory.co.in/contact</loc>
+    </url>
+
+    <url>
+        <loc>https://aidirectory.co.in/privacy-policy</loc>
+    </url>
+
+    <url>
+        <loc>https://aidirectory.co.in/terms-and-conditions</loc>
+    </url>
+
+    <!-- INDIVIDUAL AI TOOL PAGES -->
+    <url>
+        <loc>https://aidirectory.co.in/tools/chatgpt</loc>
+    </url>
+
+    <url>
+        <loc>https://aidirectory.co.in/tools/claude</loc>
+    </url>
+
+    <url>
+        <loc>https://aidirectory.co.in/tools/gemini</loc>
+    </url>
+
+    <url>
+        <loc>https://aidirectory.co.in/tools/perplexity</loc>
+    </url>
+
+    <!-- AI CATEGORY PAGES -->
+    <url>
+        <loc>https://aidirectory.co.in/category/ai-writing</loc>
+    </url>
+
+    <url>
+        <loc>https://aidirectory.co.in/category/ai-coding</loc>
+    </url>
+
+    <url>
+        <loc>https://aidirectory.co.in/category/ai-image</loc>
+    </url>
+
+    <url>
+        <loc>https://aidirectory.co.in/category/ai-video</loc>
+    </url>
+
+    <!-- AI COMPARISON PAGES -->
+    <url>
+        <loc>https://aidirectory.co.in/compare/chatgpt-vs-claude</loc>
+    </url>
+
+    <url>
+        <loc>https://aidirectory.co.in/compare/chatgpt-vs-gemini</loc>
+    </url>
+
+    <url>
+        <loc>https://aidirectory.co.in/compare/best-ai-coding-tools</loc>
+    </url>
+
+    <!-- BLOG AND EDUCATIONAL ARTICLES -->
+    <url>
+        <loc>https://aidirectory.co.in/blog/best-free-ai-tools-for-students</loc>
+    </url>
+
+    <url>
+        <loc>https://aidirectory.co.in/blog/how-to-use-ai-for-coding</loc>
+    </url>
+
 </urlset>
